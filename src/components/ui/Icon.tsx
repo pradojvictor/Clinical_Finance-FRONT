@@ -59,6 +59,7 @@ const paths: Record<string, ReactNode> = {
       <path d="M13.5 21a1.8 1.8 0 0 1-3 0" />
     </>
   ),
+  chevron: <path d="m14 7-5 5 5 5" />,
 }
 
 export type IconName =
@@ -70,6 +71,7 @@ export type IconName =
   | 'logout'
   | 'user'
   | 'bell'
+  | 'chevron'
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'name'> {
   name: IconName

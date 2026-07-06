@@ -1,134 +1,160 @@
+/* Trilho lateral escuro que "flutua" sobre o fundo.
+   Colapsado = estreito, só ícones. Expandido = mais largo, com rótulos,
+   abrindo POR CIMA do conteúdo (flyout) — não empurra a página. */
 .sidebar {
   grid-area: sidebar;
-  width: var(--sidebar-w);
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, var(--brand-navy) 0%, #151a38 100%);
-  color: var(--text-on-navy);
-  border-right: 0.0625rem solid rgba(255, 255, 255, 0.04);
+  position: relative; /* âncora do trilho absoluto */
+  background: var(--bg);
 }
 
-/* ---- Marca --------------------------------------------------------- */
+.rail {
+  position: absolute;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  left: 0.6rem;
+  width: calc(var(--sidebar-w) - 1.2rem); /* ~4.3rem colapsado */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-5);
+  padding: var(--sp-4) 0.55rem var(--sp-3);
+  background: linear-gradient(180deg, var(--rail-bg) 0%, var(--rail-bg-2) 100%);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  z-index: 30;
+  transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.24s ease;
+}
+.railOpen {
+  width: 13.5rem;
+  align-items: stretch;
+  box-shadow: var(--shadow-lg);
+}
+
+/* ---- Marca ------------------------------------------------------- */
 .brand {
   display: flex;
   align-items: center;
-  height: var(--topbar-h);
-  padding: 0 var(--sp-5);
+  gap: 0.625rem;
+  width: 2.5rem;        /* colapsado: só o tile */
+  overflow: hidden;
+  flex: none;
+}
+.railOpen .brand {
+  width: 100%;
+  padding-left: 0.125rem;
+}
+.logoTile {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  overflow: hidden;
   background: #ffffff;
-  border-bottom: 0.0625rem solid var(--border);
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.25);
 }
 .logo {
-  height: 2rem;
-  width: auto;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left center;
+  transform: scale(1.02);
+}
+.brandName {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text-on-navy);
+  white-space: nowrap;
 }
 
-/* ---- Navegação ----------------------------------------------------- */
+/* ---- Navegação --------------------------------------------------- */
 .nav {
   flex: 1;
-  padding: var(--sp-5) var(--sp-3);
-  overflow-y: auto;
-}
-.navLabel {
-  display: block;
-  padding: 0 var(--sp-3) var(--sp-2);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-on-navy-soft);
+  width: 100%;
 }
 .nav ul {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-}
-.link {
-  display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  padding: 0.625rem var(--sp-3);
-  border-radius: var(--radius-md);
-  color: var(--text-on-navy-soft);
-  font-size: var(--fs-md);
-  font-weight: 500;
-  transition: background 0.15s ease, color 0.15s ease;
+  gap: 0.5rem;
 }
-.link:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-on-navy);
-}
-.linkIcon {
-  display: inline-flex;
-  color: currentColor;
-}
-.linkActive {
-  background: var(--brand-blue);
-  color: #ffffff;
-  box-shadow: var(--shadow-sm);
-}
-.linkActive:hover {
-  background: var(--brand-blue);
-  color: #ffffff;
+.railOpen .nav ul {
+  align-items: stretch;
 }
 
-/* ---- Usuário ------------------------------------------------------- */
-.user {
-  padding: var(--sp-3);
-  border-top: 0.0625rem solid rgba(255, 255, 255, 0.08);
-}
-.userInfo {
+.link,
+.logout {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-3);
+  gap: 0.75rem;
+  height: 2.75rem;
+  width: 2.75rem;
+  border-radius: var(--radius-md);
+  color: var(--rail-icon);
+  white-space: nowrap;
+  overflow: hidden; /* recorta o rótulo quando colapsado */
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
-.avatar {
+.railOpen .link,
+.railOpen .logout {
+  width: 100%;
+  padding-right: 0.5rem;
+}
+.linkIcon {
   flex: none;
-  width: 2.25rem;
+  width: 2.75rem; /* mantém o ícone centralizado no quadrado colapsado */
+  display: grid;
+  place-items: center;
+}
+.linkLabel {
+  font-size: var(--fs-md);
+  font-weight: 500;
+}
+
+.link:hover,
+.logout:hover {
+  color: var(--rail-icon-hover);
+  background: rgba(255, 255, 255, 0.07);
+}
+.linkActive,
+.linkActive:hover {
+  color: #ffffff;
+  background: var(--brand-blue);
+  box-shadow: 0 0.375rem 0.875rem rgba(111, 159, 196, 0.45);
+}
+.logout {
+  flex: none;
+}
+.logout:hover {
+  color: #ffd9d6;
+  background: rgba(192, 69, 63, 0.22);
+}
+
+/* ---- Alcinha (botão de expandir/recolher) ------------------------ */
+.handle {
+  position: absolute;
+  right: -0.5rem;
+  top: 6.25rem;
+  width: 1rem;
   height: 2.25rem;
   display: grid;
   place-items: center;
+  background: var(--rail-bg);
   border-radius: var(--radius-pill);
-  background: var(--brand-blue);
+  color: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  z-index: 2;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.handle:hover {
   color: #ffffff;
-  font-size: var(--fs-sm);
-  font-weight: 700;
+  background: #2f313d;
 }
-.userMeta {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+.handle svg {
+  transform: rotate(180deg); /* colapsado: aponta p/ fora (abrir) */
+  transition: transform 0.24s ease;
 }
-.userName {
-  font-size: var(--fs-md);
-  font-weight: 600;
-  color: var(--text-on-navy);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.userRole {
-  font-size: var(--fs-xs);
-  color: var(--text-on-navy-soft);
-}
-.logout {
-  margin-top: var(--sp-2);
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  padding: 0.5rem;
-  border-radius: var(--radius-md);
-  color: var(--text-on-navy-soft);
-  font-size: var(--fs-md);
-  font-weight: 500;
-  border: 0.0625rem solid rgba(255, 255, 255, 0.10);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.logout:hover {
-  background: rgba(192, 69, 63, 0.18);
-  color: #ffd9d6;
-  border-color: rgba(192, 69, 63, 0.4);
+.railOpen .handle svg {
+  transform: rotate(0deg); /* expandido: aponta p/ dentro (recolher) */
 }

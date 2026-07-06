@@ -19,6 +19,12 @@
   --brand-blue-100:    #e6eef6;
   --brand-gray:        #c0c4cc;
 
+  /* ---- Trilho lateral (menu) ------------------------------------ */
+  --rail-bg:           #23242e;
+  --rail-bg-2:         #16171d;
+  --rail-icon:         rgba(255, 255, 255, 0.45);
+  --rail-icon-hover:   rgba(255, 255, 255, 0.92);
+
   /* ---- Superfícies / neutros ------------------------------------ */
   --bg:                #eef1f6;
   --surface:           #ffffff;
@@ -81,6 +87,6 @@
   --fs-3xl:  2.25rem;
 
   /* ---- Layout --------------------------------------------------- */
-  --sidebar-w:  15rem;   /* 240px */
+  --sidebar-w:  5.5rem;  /* trilho estreito só com ícones */
   --topbar-h:   4rem;    /* 64px  */
 }
