@@ -1,5 +1,5 @@
 import Icon from '../ui/Icon'
-import { currentUser } from '../../lib/session'
+import { useAuth } from '../../lib/auth'
 import styles from './Topbar.module.css'
 
 interface TopbarProps {
@@ -20,6 +20,8 @@ function hojeExtenso(): string {
 }
 
 export default function Topbar({ title, subtitle }: TopbarProps) {
+  const { user } = useAuth()
+  const nome = user?.nome ?? ''
   return (
     <header className={styles.topbar}>
       <div className={styles.titleBlock}>
@@ -32,9 +34,9 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
         <button type="button" className={styles.iconBtn} aria-label="Notificações">
           <Icon name="bell" size={20} />
         </button>
-        <div className={styles.userChip} title={currentUser.nome}>
+        <div className={styles.userChip} title={nome}>
           <Icon name="user" size={18} />
-          <span>{currentUser.nome}</span>
+          <span>{nome}</span>
         </div>
       </div>
     </header>

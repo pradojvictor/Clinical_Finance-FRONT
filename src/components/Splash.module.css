@@ -1,0 +1,36 @@
+.splash {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+}
+.inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.logo {
+  height: 2.25rem;
+  width: auto;
+  object-fit: contain;
+  opacity: 0.9;
+}
+.spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0.1875rem solid var(--border-strong);
+  border-top-color: var(--brand-blue);
+  border-radius: var(--radius-pill);
+  animation: girar 0.7s linear infinite;
+}
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.text {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}

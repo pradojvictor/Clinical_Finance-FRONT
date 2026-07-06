@@ -3,11 +3,16 @@ import { NavLink } from 'react-router-dom'
 import logo from '../../assets/logo.jpeg'
 import Icon from '../ui/Icon'
 import { NAV_ITEMS } from '../../config/nav'
+import { useAuth } from '../../lib/auth'
 import styles from './Sidebar.module.css'
 
 export default function Sidebar() {
+  const { user, sair } = useAuth()
   const [aberto, setAberto] = useState(false)
   const railRef = useRef<HTMLDivElement>(null)
+
+  // Só mostra as páginas permitidas ao perfil do usuário.
+  const itens = NAV_ITEMS.filter((item) => user !== null && item.roles.includes(user.perfil))
 
   // Clicar fora do trilho recolhe o menu.
   useEffect(() => {
@@ -22,8 +27,8 @@ export default function Sidebar() {
   }, [aberto])
 
   const handleSair = () => {
-    // Etapa 2: encerra a sessão no backend e redireciona para /login.
-    console.info('[sessão] Sair — será ligado à autenticação na Etapa 2.')
+    // Encerra a sessão no backend; a ProtectedRoute redireciona p/ /login.
+    void sair()
   }
 
   return (
@@ -40,7 +45,7 @@ export default function Sidebar() {
         {/* Navegação */}
         <nav className={styles.nav} aria-label="Menu principal">
           <ul>
-            {NAV_ITEMS.map((item) => (
+            {itens.map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
