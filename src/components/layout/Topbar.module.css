@@ -1,0 +1,60 @@
+.topbar {
+  grid-area: topbar;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-8);
+  background: var(--surface);
+  border-bottom: 0.0625rem solid var(--border);
+}
+
+.titleBlock {
+  min-width: 0;
+}
+.title {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+}
+.subtitle {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin-top: 0.125rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.date {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.iconBtn {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.iconBtn:hover {
+  background: var(--surface-2);
+  color: var(--brand-blue-700);
+}
+.userChip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--brand-blue-100);
+  color: var(--brand-blue-700);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}

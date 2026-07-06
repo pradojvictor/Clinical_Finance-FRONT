@@ -1,0 +1,134 @@
+.sidebar {
+  grid-area: sidebar;
+  width: var(--sidebar-w);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--brand-navy) 0%, #151a38 100%);
+  color: var(--text-on-navy);
+  border-right: 0.0625rem solid rgba(255, 255, 255, 0.04);
+}
+
+/* ---- Marca --------------------------------------------------------- */
+.brand {
+  display: flex;
+  align-items: center;
+  height: var(--topbar-h);
+  padding: 0 var(--sp-5);
+  background: #ffffff;
+  border-bottom: 0.0625rem solid var(--border);
+}
+.logo {
+  height: 2rem;
+  width: auto;
+  object-fit: contain;
+}
+
+/* ---- Navegação ----------------------------------------------------- */
+.nav {
+  flex: 1;
+  padding: var(--sp-5) var(--sp-3);
+  overflow-y: auto;
+}
+.navLabel {
+  display: block;
+  padding: 0 var(--sp-3) var(--sp-2);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-on-navy-soft);
+}
+.nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0.625rem var(--sp-3);
+  border-radius: var(--radius-md);
+  color: var(--text-on-navy-soft);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-on-navy);
+}
+.linkIcon {
+  display: inline-flex;
+  color: currentColor;
+}
+.linkActive {
+  background: var(--brand-blue);
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+.linkActive:hover {
+  background: var(--brand-blue);
+  color: #ffffff;
+}
+
+/* ---- Usuário ------------------------------------------------------- */
+.user {
+  padding: var(--sp-3);
+  border-top: 0.0625rem solid rgba(255, 255, 255, 0.08);
+}
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+}
+.avatar {
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--brand-blue);
+  color: #ffffff;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.userMeta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.userName {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text-on-navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.userRole {
+  font-size: var(--fs-xs);
+  color: var(--text-on-navy-soft);
+}
+.logout {
+  margin-top: var(--sp-2);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  color: var(--text-on-navy-soft);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  border: 0.0625rem solid rgba(255, 255, 255, 0.10);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.logout:hover {
+  background: rgba(192, 69, 63, 0.18);
+  color: #ffd9d6;
+  border-color: rgba(192, 69, 63, 0.4);
+}

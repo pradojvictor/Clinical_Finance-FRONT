@@ -1,0 +1,20 @@
+/* Grade do app: barra lateral em coluna, topo + conteúdo à direita.
+   Altura travada na viewport para caber o alvo 1360 x 680. */
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-rows: var(--topbar-h) 1fr;
+  grid-template-areas:
+    'sidebar topbar'
+    'sidebar content';
+  height: 100vh;
+  height: 100dvh;
+  min-width: 60rem;
+}
+
+.content {
+  grid-area: content;
+  overflow-y: auto;
+  padding: var(--sp-6) var(--sp-8);
+  background: var(--bg);
+}

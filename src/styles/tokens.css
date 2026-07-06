@@ -1,0 +1,86 @@
+/* =====================================================================
+   Design tokens — Clinleste Balanço Financeiro
+   Paleta extraída da logo (Clinleste):
+     azul-aço  #6f9fc4  (marca / texto)
+     marinho   #1a1f42  (símbolo escuro)
+     cinza     #c0c4cc  (detalhe)
+   Todas as medidas em rem. Base: 1rem = 16px.
+   Alvo de projeto: 1360 x 680 px.
+   ===================================================================== */
+:root {
+  /* ---- Marca ---------------------------------------------------- */
+  --brand-navy:        #1a1f42;
+  --brand-navy-800:    #232a52;
+  --brand-navy-700:    #2c3462;
+  --brand-blue:        #6f9fc4;
+  --brand-blue-600:    #5a8cb5;
+  --brand-blue-700:    #4a7aa1;
+  --brand-blue-300:    #9cc0dd;
+  --brand-blue-100:    #e6eef6;
+  --brand-gray:        #c0c4cc;
+
+  /* ---- Superfícies / neutros ------------------------------------ */
+  --bg:                #eef1f6;
+  --surface:           #ffffff;
+  --surface-2:         #f7f9fc;
+  --border:            #e2e6ee;
+  --border-strong:     #cdd4e0;
+
+  /* ---- Texto ---------------------------------------------------- */
+  --text:              #1f2433;
+  --text-muted:        #667085;
+  --text-soft:         #98a2b3;
+  --text-on-navy:      #eaeefb;
+  --text-on-navy-soft: #a7b0d4;
+
+  /* ---- Formas de pagamento (semântico) -------------------------- */
+  --pay-pix:           #2fae9b;   /* pix        */
+  --pay-especie:       #3f9e57;   /* espécie    */
+  --pay-debito:        #5a8cb5;   /* débito     */
+
+  /* ---- Estados -------------------------------------------------- */
+  --success:           #2f9e5f;
+  --success-bg:        #e7f5ec;
+  --warning:           #c98a1a;
+  --warning-bg:        #fbf1dd;
+  --danger:            #c0453f;
+  --danger-bg:         #fbe9e8;
+
+  /* ---- Raio ----------------------------------------------------- */
+  --radius-sm:  0.375rem;
+  --radius-md:  0.625rem;
+  --radius-lg:  0.875rem;
+  --radius-xl:  1.25rem;
+  --radius-pill: 62.5rem;
+
+  /* ---- Sombra --------------------------------------------------- */
+  --shadow-xs: 0 0.0625rem 0.125rem rgba(26, 31, 66, 0.06);
+  --shadow-sm: 0 0.125rem 0.5rem rgba(26, 31, 66, 0.08);
+  --shadow-md: 0 0.5rem 1.5rem rgba(26, 31, 66, 0.10);
+  --shadow-lg: 0 1rem 2.5rem rgba(26, 31, 66, 0.14);
+
+  /* ---- Espaçamento (escala) ------------------------------------- */
+  --sp-1:  0.25rem;
+  --sp-2:  0.5rem;
+  --sp-3:  0.75rem;
+  --sp-4:  1rem;
+  --sp-5:  1.25rem;
+  --sp-6:  1.5rem;
+  --sp-8:  2rem;
+  --sp-10: 2.5rem;
+
+  /* ---- Tipografia ----------------------------------------------- */
+  --font-sans: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --fs-xs:   0.75rem;
+  --fs-sm:   0.8125rem;
+  --fs-md:   0.875rem;
+  --fs-base: 1rem;
+  --fs-lg:   1.125rem;
+  --fs-xl:   1.375rem;
+  --fs-2xl:  1.75rem;
+  --fs-3xl:  2.25rem;
+
+  /* ---- Layout --------------------------------------------------- */
+  --sidebar-w:  15rem;   /* 240px */
+  --topbar-h:   4rem;    /* 64px  */
+}

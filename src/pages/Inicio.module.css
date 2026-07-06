@@ -1,0 +1,14 @@
+/* Página inicial — apenas a logo centralizada (ponto de partida). */
+.wrap {
+  height: 100%;
+  min-height: 28rem;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-8);
+}
+.logo {
+  width: min(28rem, 60%);
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+}

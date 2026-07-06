@@ -1,0 +1,29 @@
+.card {
+  background: var(--surface);
+  border: 0.0625rem solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 0.0625rem solid var(--border);
+}
+.title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text);
+}
+.action {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.body {
+  padding: var(--sp-5);
+}
