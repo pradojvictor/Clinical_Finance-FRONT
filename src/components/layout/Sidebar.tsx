@@ -49,7 +49,7 @@ export default function Sidebar() {
               <li key={item.to}>
                 <NavLink
                   to={item.to}
-                  end={item.to === '/'}
+                  end={item.to === '/sistema'}
                   title={aberto ? undefined : item.label}
                   aria-label={item.label}
                   className={({ isActive }) =>

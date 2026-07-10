@@ -20,7 +20,7 @@ export default function Login() {
   // Enquanto verifica a sessão, evita piscar o formulário.
   if (carregando) return <Splash texto="Verificando sessão…" />
   // Já autenticado? vai direto pro sistema.
-  if (user) return <Navigate to="/" replace />
+  if (user) return <Navigate to="/sistema" replace />
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -28,7 +28,7 @@ export default function Login() {
     setEnviando(true)
     try {
       await entrar(login.trim(), senha)
-      navigate('/', { replace: true })
+      navigate('/sistema', { replace: true })
     } catch (err) {
       setErro(
         err instanceof ApiError ? err.message : 'Não foi possível entrar. Tente novamente.',

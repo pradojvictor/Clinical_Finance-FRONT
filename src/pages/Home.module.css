@@ -1,0 +1,9 @@
+/* Home pública — vazia por enquanto, com um fundo suave da marca. */
+.main {
+  min-height: calc(100vh - var(--nav-h));
+  min-height: calc(100dvh - var(--nav-h));
+  background:
+    radial-gradient(45rem 30rem at 12% -12%, #e2ecf7 0%, transparent 60%),
+    radial-gradient(40rem 30rem at 112% 8%, #eaf1f8 0%, transparent 55%),
+    var(--bg);
+}

@@ -17,6 +17,13 @@ const paths: Record<string, ReactNode> = {
       <path d="M4 21h16" />
     </>
   ),
+  saida: (
+    <>
+      <path d="M12 21V9" />
+      <path d="m7.5 13.5 4.5-4.5 4.5 4.5" />
+      <path d="M4 3h16" />
+    </>
+  ),
   proc: (
     <>
       <rect x="4" y="4" width="16" height="16" rx="2" />
@@ -74,11 +81,19 @@ const paths: Record<string, ReactNode> = {
       <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
     </>
   ),
+  image: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="m21 15-5-5L5 21" />
+    </>
+  ),
 }
 
 export type IconName =
   | 'home'
   | 'entrada'
+  | 'saida'
   | 'proc'
   | 'balanco'
   | 'admin'
@@ -88,6 +103,7 @@ export type IconName =
   | 'chevron'
   | 'eye'
   | 'eyeOff'
+  | 'image'
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'name'> {
   name: IconName

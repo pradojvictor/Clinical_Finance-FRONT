@@ -21,9 +21,10 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { to: '/',              label: 'Início',        icon: 'home',    roles: [ROLES.GESTOR, ROLES.OPERADOR] },
-  { to: '/entradas',      label: 'Entradas',      icon: 'entrada', roles: [ROLES.GESTOR, ROLES.OPERADOR] },
-  { to: '/procedimentos', label: 'Procedimentos', icon: 'proc',    roles: [ROLES.GESTOR, ROLES.OPERADOR] },
-  { to: '/balanco',       label: 'Balanço',       icon: 'balanco', roles: [ROLES.GESTOR] },
-  { to: '/admin',         label: 'Admin',         icon: 'admin',   roles: [ROLES.GESTOR] },
+  { to: '/sistema',              label: 'Início',        icon: 'home',    roles: [ROLES.GESTOR, ROLES.OPERADOR] },
+  { to: '/sistema/entradas',     label: 'Entradas',      icon: 'entrada', roles: [ROLES.GESTOR, ROLES.OPERADOR] },
+  { to: '/sistema/saidas',       label: 'Saídas',        icon: 'saida',   roles: [ROLES.GESTOR] },
+  { to: '/sistema/procedimentos', label: 'Procedimentos', icon: 'proc',   roles: [ROLES.GESTOR, ROLES.OPERADOR] },
+  { to: '/sistema/balanco',      label: 'Balanço',       icon: 'balanco', roles: [ROLES.GESTOR] },
+  { to: '/sistema/admin',        label: 'Admin',         icon: 'admin',   roles: [ROLES.GESTOR] },
 ]

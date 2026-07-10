@@ -9,7 +9,7 @@ import { authApi, ApiError, type Usuario } from './api'
 interface AuthContextValue {
   user: Usuario | null
   carregando: boolean
-  entrar: (login: string, senha: string) => Promise<void>
+  entrar: (login: string, senha: string) => Promise<Usuario>
   sair: () => Promise<void>
 }
 
@@ -38,9 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const entrar = async (login: string, senha: string) => {
+  const entrar = async (login: string, senha: string): Promise<Usuario> => {
     const r = await authApi.login(login, senha)
     setUser(r.usuario)
+    return r.usuario
   }
 
   const sair = async () => {

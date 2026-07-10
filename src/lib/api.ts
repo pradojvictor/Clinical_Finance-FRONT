@@ -57,3 +57,12 @@ export const authApi = {
     }),
   logout: () => req<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
 }
+
+// Site público — registro de cliente (login do cliente vem depois).
+export const clientesApi = {
+  registro: (nome: string, email: string, senha: string) =>
+    req<{ ok: boolean }>('/clientes/registro', {
+      method: 'POST',
+      body: JSON.stringify({ nome, email, senha }),
+    }),
+}

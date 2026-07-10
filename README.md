@@ -1,8 +1,14 @@
-# Clinleste — Balanço Financeiro
+# Clinleste — Site + Balanço Financeiro
 
-Sistema de **balanço financeiro** da clínica Clinleste. O sistema **não processa
-pagamentos** — apenas **registra** o que entra (Pix, espécie e cartão de débito)
-e consolida o balanço por período e forma de pagamento.
+App **único** da clínica Clinleste (React + Vite + TypeScript):
+
+- **`/`** — site institucional público (navbar com logo + botão **Admin**).
+- **`/login`** — login do sistema.
+- **`/sistema/*`** — sistema de **balanço financeiro** (protegido). Não processa
+  pagamentos — só **registra** o que entra (Pix, espécie, cartão de débito) e
+  consolida o balanço. O botão **Admin** leva ao sistema (login se necessário).
+
+Roda na porta **5173**; conversa com a API (`FINANCE-BACK`, :3001) via proxy `/api`.
 
 ## Etapa 1 — Frontend (esta entrega)
 

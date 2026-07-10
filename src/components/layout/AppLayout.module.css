@@ -18,3 +18,9 @@
   padding: var(--sp-6) var(--sp-8);
   background: var(--bg);
 }
+
+.carregando {
+  padding: var(--sp-8);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}

@@ -89,4 +89,6 @@
   /* ---- Layout --------------------------------------------------- */
   --sidebar-w:  5.5rem;  /* trilho estreito só com ícones */
   --topbar-h:   4rem;    /* 64px  */
+  --nav-h:      4.5rem;  /* navbar do site público */
+  --container:  75rem;   /* largura máx. do site público */
 }
