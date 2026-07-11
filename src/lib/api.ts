@@ -66,3 +66,93 @@ export const clientesApi = {
       body: JSON.stringify({ nome, email, senha }),
     }),
 }
+
+// ---- Admin: bancos e taxas ----------------------------------------
+export type Forma = 'pix' | 'debito' | 'credito' | 'especie'
+
+export interface Banco {
+  id: number
+  nome: string
+  ativo: boolean
+  criado_em: string
+  atualizado_em: string
+}
+
+export interface Taxa {
+  id: number
+  forma: Forma
+  banco_id: number
+  percentual_bp: number
+  banco_nome: string
+  atualizado_em: string
+}
+
+export const bancosApi = {
+  listar: () => req<{ bancos: Banco[] }>('/bancos'),
+  criar: (nome: string) =>
+    req<{ banco: Banco }>('/bancos', { method: 'POST', body: JSON.stringify({ nome }) }),
+  atualizar: (id: number, dados: Partial<{ nome: string; ativo: boolean }>) =>
+    req<{ banco: Banco }>(`/bancos/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }),
+  excluir: (id: number) => req<{ ok: boolean }>(`/bancos/${id}`, { method: 'DELETE' }),
+}
+
+export const taxasApi = {
+  listar: () => req<{ taxas: Taxa[] }>('/taxas'),
+  atualizar: (id: number, percentual_bp: number) =>
+    req<{ taxa: Taxa }>(`/taxas/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ percentual_bp }),
+    }),
+  lookup: (forma: Forma, banco_id: number) =>
+    req<{ percentual_bp: number }>(`/taxas/lookup?forma=${forma}&banco_id=${banco_id}`),
+}
+
+// ---- Pacientes e Entradas -----------------------------------------
+export interface Paciente {
+  id: number
+  nome: string
+  cpf: string | null
+  email: string | null
+}
+
+export interface EntradaDetalhe {
+  id: number
+  data: string
+  forma: Forma
+  valor_centavos: number
+  taxa_bp: number
+  valor_liquido_centavos: number
+  paciente_nome: string | null
+  banco_nome: string | null
+  operador_nome: string
+  observacao: string | null
+}
+
+export interface NovaEntrada {
+  forma: Forma
+  valor_centavos: number
+  data?: string
+  banco_id?: number | null
+  paciente_id?: number | null
+  paciente?: { nome: string; cpf?: string; email?: string }
+  observacao?: string
+}
+
+export const pacientesApi = {
+  buscar: (q: string) =>
+    req<{ pacientes: Paciente[] }>(`/pacientes?q=${encodeURIComponent(q)}`),
+}
+
+export const entradasApi = {
+  listar: () => req<{ entradas: EntradaDetalhe[] }>('/entradas'),
+  criar: (dados: NovaEntrada) =>
+    req<{ entrada: EntradaDetalhe }>('/entradas', {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    }),
+  lote: (entradas: NovaEntrada[]) =>
+    req<{ criadas: number; pacientes_novos: number }>('/entradas/lote', {
+      method: 'POST',
+      body: JSON.stringify({ entradas }),
+    }),
+}
