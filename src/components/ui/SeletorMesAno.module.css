@@ -1,0 +1,34 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.grupo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.rotulo {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+.select {
+  padding: 0.4375rem 0.625rem;
+  border-radius: var(--radius-md);
+  border: 0.0625rem solid var(--border-strong);
+  background: var(--surface);
+  font-size: var(--fs-md);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  min-width: 4.5rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.select:focus {
+  outline: none;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 0.1875rem var(--brand-blue-100);
+}

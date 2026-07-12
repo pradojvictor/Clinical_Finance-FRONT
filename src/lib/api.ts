@@ -42,10 +42,14 @@ async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T
 }
 
+/** Perfil do principal logado: staff (gestor/operador) ou cliente do site. */
+export type PerfilUsuario = Role | 'cliente'
+
 export interface Usuario {
   login: string
   nome: string
-  perfil: Role
+  perfil: PerfilUsuario
+  email?: string
 }
 
 export const authApi = {
@@ -59,12 +63,43 @@ export const authApi = {
 }
 
 // Site público — registro de cliente (login do cliente vem depois).
+export interface NovoCliente {
+  nome: string
+  email: string
+  senha: string
+  data_nascimento: string
+  cpf?: string
+}
+export interface ClienteDados {
+  nome: string
+  cpf: string | null
+  email: string
+  data_nascimento: string | null
+}
+export interface ClienteLista {
+  id: number
+  nome: string
+  cpf: string | null
+  email: string
+  data_nascimento: string | null
+  criado_em: string
+}
 export const clientesApi = {
-  registro: (nome: string, email: string, senha: string) =>
+  registro: (dados: NovoCliente) =>
     req<{ ok: boolean }>('/clientes/registro', {
       method: 'POST',
-      body: JSON.stringify({ nome, email, senha }),
+      body: JSON.stringify(dados),
     }),
+  // Cadastro do cliente pelo operador (dentro do sistema).
+  criar: (dados: NovoCliente) =>
+    req<{ cliente: { id: number; nome: string; email: string } }>('/clientes', {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    }),
+  // Lista de clientes cadastrados (staff), com busca opcional.
+  listar: (q?: string) =>
+    req<{ clientes: ClienteLista[] }>(`/clientes${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  eu: () => req<{ cliente: ClienteDados }>('/clientes/eu'),
 }
 
 // ---- Admin: bancos e taxas ----------------------------------------
@@ -143,16 +178,154 @@ export const pacientesApi = {
     req<{ pacientes: Paciente[] }>(`/pacientes?q=${encodeURIComponent(q)}`),
 }
 
+export interface LinhaImport {
+  nome: string
+  data?: string
+  valor_centavos: number
+}
+export interface VerificacaoImport {
+  arquivo_conteudo_igual: { arquivo_nome: string; criado_em: string } | null
+  arquivo_nome_igual: { criado_em: string } | null
+  linhas_duplicadas: { indice: number; entrada_id: number }[]
+}
+export interface MetaImport {
+  arquivo_nome: string
+  conteudo_hash: string
+}
+
 export const entradasApi = {
-  listar: () => req<{ entradas: EntradaDetalhe[] }>('/entradas'),
+  listar: (params?: { de?: string; ate?: string }) => {
+    const qs = new URLSearchParams()
+    if (params?.de) qs.set('de', params.de)
+    if (params?.ate) qs.set('ate', params.ate)
+    const s = qs.toString()
+    return req<{ entradas: EntradaDetalhe[] }>(`/entradas${s ? `?${s}` : ''}`)
+  },
   criar: (dados: NovaEntrada) =>
     req<{ entrada: EntradaDetalhe }>('/entradas', {
       method: 'POST',
       body: JSON.stringify(dados),
     }),
-  lote: (entradas: NovaEntrada[]) =>
+  lote: (entradas: NovaEntrada[], meta?: MetaImport) =>
     req<{ criadas: number; pacientes_novos: number }>('/entradas/lote', {
       method: 'POST',
-      body: JSON.stringify({ entradas }),
+      body: JSON.stringify({ entradas, ...meta }),
     }),
+  verificarImportacao: (arquivo_nome: string, conteudo_hash: string, linhas: LinhaImport[]) =>
+    req<VerificacaoImport>('/entradas/verificar-importacao', {
+      method: 'POST',
+      body: JSON.stringify({ arquivo_nome, conteudo_hash, linhas }),
+    }),
+}
+
+// ---- Saídas -------------------------------------------------------
+// Saída não aceita crédito.
+export type FormaSaida = 'pix' | 'debito' | 'especie'
+
+export interface SaidaDetalhe {
+  id: number
+  data: string
+  forma: FormaSaida
+  valor_centavos: number
+  banco_id: number | null
+  categoria_id: number | null
+  subcategoria_id: number | null
+  categoria_nome: string | null
+  subcategoria_nome: string | null
+  banco_nome: string | null
+  observacao: string | null
+  operador_nome: string
+}
+export interface NovaSaida {
+  forma: FormaSaida
+  valor_centavos: number
+  data?: string
+  banco_id?: number | null
+  categoria_id: number
+  subcategoria_id?: number | null
+  observacao?: string
+}
+export const saidasApi = {
+  listar: () => req<{ saidas: SaidaDetalhe[] }>('/saidas'),
+  criar: (dados: NovaSaida) =>
+    req<{ saida: SaidaDetalhe }>('/saidas', { method: 'POST', body: JSON.stringify(dados) }),
+}
+
+// ---- Categorias de saída (árvore central > categoria > subcategoria) ----
+export type NivelCategoriaSaida = 'central' | 'categoria' | 'subcategoria'
+export interface CategoriaSaida {
+  id: number
+  nome: string
+  parent_id: number | null
+  nivel: NivelCategoriaSaida
+  ativo: boolean
+}
+export interface NovaCategoriaSaida {
+  nome: string
+  nivel: NivelCategoriaSaida
+  parent_id?: number | null
+}
+export const categoriasSaidaApi = {
+  listar: () => req<{ categorias: CategoriaSaida[] }>('/categorias-saida'),
+  criar: (dados: NovaCategoriaSaida) =>
+    req<{ categoria: CategoriaSaida }>('/categorias-saida', { method: 'POST', body: JSON.stringify(dados) }),
+  atualizar: (id: number, dados: Partial<{ nome: string; ativo: boolean }>) =>
+    req<{ categoria: CategoriaSaida }>(`/categorias-saida/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }),
+  excluir: (id: number) => req<{ ok: boolean }>(`/categorias-saida/${id}`, { method: 'DELETE' }),
+}
+
+// ---- Balanço ------------------------------------------------------
+export interface ResumoForma {
+  forma: Forma
+  entradas_bruto_centavos: number
+  entradas_liquido_centavos: number
+  qtd_entradas: number
+  saidas_centavos: number
+  qtd_saidas: number
+}
+export interface BalancoTotal {
+  entradas_bruto_centavos: number
+  entradas_liquido_centavos: number
+  qtd_entradas: number
+  saidas_centavos: number
+  qtd_saidas: number
+}
+export interface Balanco {
+  de: string
+  ate: string
+  por_forma: ResumoForma[]
+  total: BalancoTotal
+}
+export const balancoApi = {
+  obter: (de: string, ate: string) =>
+    req<{ balanco: Balanco }>(`/balanco?de=${de}&ate=${ate}`),
+}
+
+// ---- Usuários (administração) -------------------------------------
+export type Perfil = 'gestor' | 'operador'
+
+export interface UsuarioAdmin {
+  id: number
+  login: string
+  nome: string
+  perfil: Perfil
+  ativo: boolean
+  ultimo_acesso: string | null
+  criado_em: string
+}
+export interface NovoUsuario {
+  login: string
+  nome: string
+  perfil: Perfil
+  senha: string
+}
+export const usuariosApi = {
+  listar: () => req<{ usuarios: UsuarioAdmin[] }>('/usuarios'),
+  criar: (dados: NovoUsuario) =>
+    req<{ usuario: UsuarioAdmin }>('/usuarios', { method: 'POST', body: JSON.stringify(dados) }),
+  atualizar: (id: number, dados: Partial<{ nome: string; perfil: Perfil; ativo: boolean }>) =>
+    req<{ usuario: UsuarioAdmin }>(`/usuarios/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }),
+  senha: (id: number, senha: string) =>
+    req<{ ok: boolean }>(`/usuarios/${id}/senha`, { method: 'PATCH', body: JSON.stringify({ senha }) }),
+  desativar: (id: number) => req<{ ok: boolean }>(`/usuarios/${id}`, { method: 'DELETE' }),
 }

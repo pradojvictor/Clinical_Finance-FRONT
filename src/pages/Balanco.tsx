@@ -1,66 +1,123 @@
-import type { ReactNode } from 'react'
-import Card from '../components/ui/Card'
-import StatCard from '../components/ui/StatCard'
-import Placeholder from '../components/ui/Placeholder'
-import Icon from '../components/ui/Icon'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { ApiError, balancoApi, type Balanco as BalancoT, type Forma, type ResumoForma } from '../lib/api'
+import { FORMA_LABEL, brl, periodoAno, periodoMes } from '../lib/format'
+import SeletorMesAno from '../components/ui/SeletorMesAno'
 import s from './page.module.css'
+import b from './Balanco.module.css'
 
-const BRL = 'R$ 0,00'
+const msg = (x: unknown) => (x instanceof ApiError ? x.message : 'Ocorreu um erro.')
 
-const FORMAS = [
-  { nome: 'Pix',              cor: 'var(--pay-pix)' },
-  { nome: 'Espécie',          cor: 'var(--pay-especie)' },
-  { nome: 'Cartão de débito', cor: 'var(--pay-debito)' },
-]
+const COR: Record<Forma, string> = {
+  pix: 'var(--pay-pix)',
+  debito: 'var(--pay-debito)',
+  credito: 'var(--pay-credito)',
+  especie: 'var(--pay-especie)',
+}
 
-const dot = (cor: string): ReactNode => (
-  <span style={{ width: '0.625rem', height: '0.625rem', borderRadius: '62.5rem', background: cor, display: 'inline-block' }} />
-)
+type Periodo = 'mes' | 'ano'
 
 export default function Balanco() {
+  const agora = new Date()
+  const [periodo, setPeriodo] = useState<Periodo>('mes')
+  const [mes, setMes] = useState(agora.getMonth() + 1)
+  const [ano, setAno] = useState(agora.getFullYear())
+  const [comTaxa, setComTaxa] = useState(true)
+  const [dados, setDados] = useState<BalancoT | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [carregando, setCarregando] = useState(false)
+
+  const { de, ate } = useMemo(
+    () => (periodo === 'mes' ? periodoMes(ano, mes) : periodoAno(ano)),
+    [periodo, mes, ano],
+  )
+
+  useEffect(() => {
+    let vivo = true
+    setCarregando(true)
+    setErro(null)
+    balancoApi
+      .obter(de, ate)
+      .then((r) => vivo && setDados(r.balanco))
+      .catch((x) => vivo && setErro(msg(x)))
+      .finally(() => vivo && setCarregando(false))
+    return () => {
+      vivo = false
+    }
+  }, [de, ate])
+
+  const entradaDe = (r: ResumoForma) => (comTaxa ? r.entradas_liquido_centavos : r.entradas_bruto_centavos)
+  const totalEntradas = dados
+    ? comTaxa
+      ? dados.total.entradas_liquido_centavos
+      : dados.total.entradas_bruto_centavos
+    : 0
+  const totalSaidas = dados?.total.saidas_centavos ?? 0
+  const saldoGeral = totalEntradas - totalSaidas
+
   return (
     <div className={s.stack}>
-      <div className={s.toolbar}>
-        <div className={s.filters}>
-          <label className={s.field}>
-            <select className={s.select} disabled defaultValue="mes">
-              <option value="dia">Hoje</option>
-              <option value="semana">Esta semana</option>
-              <option value="mes">Este mês</option>
-            </select>
-          </label>
-          <input className={s.input} type="month" disabled />
+      {/* Filtros */}
+      <div className={b.toolbar}>
+        <div className={b.grupo}>
+          <div className={b.seg}>
+            <button className={periodo === 'mes' ? b.segOn : ''} onClick={() => setPeriodo('mes')}>Mês</button>
+            <button className={periodo === 'ano' ? b.segOn : ''} onClick={() => setPeriodo('ano')}>Ano completo</button>
+          </div>
+          <SeletorMesAno mes={mes} ano={ano} onMes={setMes} onAno={setAno} mostrarMes={periodo === 'mes'} />
         </div>
-        <button type="button" className={s.btn} disabled title="Disponível na Etapa 2">
-          <Icon name="balanco" size={18} /> Exportar
-        </button>
+        <div className={b.grupo}>
+          <div className={b.seg}>
+            <button className={comTaxa ? b.segOn : ''} onClick={() => setComTaxa(true)}>Com taxa</button>
+            <button className={!comTaxa ? b.segOn : ''} onClick={() => setComTaxa(false)}>Sem taxa</button>
+          </div>
+          <span className={b.hint}>{comTaxa ? 'valores líquidos (após taxa)' : 'valores brutos (sem taxa)'}</span>
+        </div>
       </div>
 
-      <div className={s.grid4}>
-        <StatCard label="Total no período" value={BRL} accent="var(--brand-navy)" />
-        <StatCard label="Pix" value={BRL} accent="var(--pay-pix)" icon={dot('var(--pay-pix)')} />
-        <StatCard label="Espécie" value={BRL} accent="var(--pay-especie)" icon={dot('var(--pay-especie)')} />
-        <StatCard label="Cartão de débito" value={BRL} accent="var(--pay-debito)" icon={dot('var(--pay-debito)')} />
+      {erro && <div className={b.erro}>{erro}</div>}
+
+      {/* Geral */}
+      <div className={b.geral}>
+        <div className={b.geralItem}>
+          <span className={b.geralLabel}>Entradas</span>
+          <strong className={b.geralValor}>{brl(totalEntradas)}</strong>
+        </div>
+        <div className={b.divisor} />
+        <div className={b.geralItem}>
+          <span className={b.geralLabel}>Saídas</span>
+          <strong className={b.geralValor}>{brl(totalSaidas)}</strong>
+        </div>
+        <div className={b.divisor} />
+        <div className={b.geralItem}>
+          <span className={b.geralLabel}>Saldo</span>
+          <strong className={`${b.geralValor} ${saldoGeral >= 0 ? b.pos : b.neg}`}>{brl(saldoGeral)}</strong>
+        </div>
       </div>
 
-      <Card title="Distribuição por forma de pagamento">
-        <div className={s.bars}>
-          {FORMAS.map((f) => (
-            <div className={s.barRow} key={f.nome}>
-              <span className={s.barLabel}>{dot(f.cor)} {f.nome}</span>
-              <span className={s.barTrack}>
-                <span className={s.barFill} style={{ width: '0%', background: f.cor }} />
-              </span>
-              <span className={s.barValue}>0%</span>
+      {/* Por forma */}
+      <div className={b.grid}>
+        {(dados?.por_forma ?? []).map((r) => {
+          const ent = entradaDe(r)
+          const saldo = ent - r.saidas_centavos
+          return (
+            <div key={r.forma} className={b.card} style={{ '--cor': COR[r.forma] } as CSSProperties}>
+              <div className={b.cardHead}>
+                <span className={b.dot} />
+                {FORMA_LABEL[r.forma]}
+                <span className={b.cardQtd}>{r.qtd_entradas} ent.</span>
+              </div>
+              <div className={b.linha}><span>Entradas</span><span>{brl(ent)}</span></div>
+              <div className={b.linha}><span>Saídas</span><span>{brl(r.saidas_centavos)}</span></div>
+              <div className={b.linhaSaldo}>
+                <span>Saldo</span>
+                <span className={saldo >= 0 ? b.pos : b.neg}>{brl(saldo)}</span>
+              </div>
             </div>
-          ))}
-        </div>
-      </Card>
+          )
+        })}
+      </div>
 
-      <Placeholder etapa="etapa 2 — backend">
-        O balanço consolida as entradas por período e forma de pagamento.
-        A visualização completa (com exportação) é de acesso exclusivo do gestor.
-      </Placeholder>
+      {carregando && <div className={b.carregando}>Atualizando…</div>}
     </div>
   )
 }

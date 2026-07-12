@@ -1,0 +1,161 @@
+/* ---- Filtros ----------------------------------------------------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+.grupo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.seg {
+  display: inline-flex;
+  padding: 0.1875rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 0.0625rem solid var(--border);
+}
+.seg button {
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.segOn {
+  background: var(--surface);
+  color: var(--brand-blue-700);
+  box-shadow: var(--shadow-xs);
+}
+.input {
+  padding: 0.4375rem 0.625rem;
+  border-radius: var(--radius-md);
+  border: 0.0625rem solid var(--border-strong);
+  background: var(--surface);
+  font-size: var(--fs-md);
+  width: 9rem;
+}
+.hint {
+  font-size: var(--fs-xs);
+  color: var(--text-soft);
+}
+.erro {
+  padding: 0.5625rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  border: 0.0625rem solid rgba(192, 69, 63, 0.25);
+}
+.carregando {
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+  text-align: center;
+}
+
+/* ---- Geral ------------------------------------------------------- */
+.geral {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-4);
+  padding: var(--sp-6) var(--sp-8);
+  background: var(--surface);
+  border: 0.0625rem solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+.geralItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.geralLabel {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.geralValor {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.divisor {
+  width: 0.0625rem;
+  background: var(--border);
+}
+.pos { color: var(--success); }
+.neg { color: var(--danger); }
+
+/* ---- Cards por forma --------------------------------------------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-4);
+}
+.card {
+  position: relative;
+  padding: var(--sp-5);
+  background: var(--surface);
+  border: 0.0625rem solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.25rem;
+  background: var(--cor);
+}
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: var(--sp-3);
+}
+.dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radius-pill);
+  background: var(--cor);
+}
+.cardQtd {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-soft);
+}
+.linha,
+.linhaSaldo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--fs-md);
+  padding: 0.3125rem 0;
+  font-variant-numeric: tabular-nums;
+}
+.linha {
+  color: var(--text-muted);
+}
+.linhaSaldo {
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 0.0625rem solid var(--border);
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ---- Responsivo -------------------------------------------------- */
+@media (max-width: 62rem) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}

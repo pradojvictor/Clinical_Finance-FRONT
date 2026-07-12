@@ -62,6 +62,45 @@
   margin-bottom: var(--sp-4);
 }
 
+/* ---- Avisos de reimportação / duplicatas ------------------------- */
+.alerta,
+.alertaForte {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  margin-bottom: var(--sp-3);
+}
+.alerta {
+  background: var(--warning-bg);
+  color: #7a5a12;
+  border: 0.0625rem solid rgba(201, 138, 26, 0.3);
+}
+.alertaForte {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 0.0625rem solid rgba(192, 69, 63, 0.3);
+}
+.alerta strong,
+.alertaForte strong { font-weight: 800; }
+.marcador { color: var(--warning); font-weight: 700; }
+.alertaBtn {
+  margin-left: auto;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-sm);
+  border: 0.0625rem solid rgba(201, 138, 26, 0.45);
+  background: var(--surface);
+  color: #7a5a12;
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.alertaBtn:hover { background: var(--warning-bg); }
+
 /* ---- Upload ------------------------------------------------------ */
 .upload {
   display: flex;
@@ -150,6 +189,17 @@
 }
 .badgeOk { background: var(--success-bg); color: var(--success); }
 .badgeNovo { background: var(--brand-blue-100); color: var(--brand-blue-700); }
+.badgeDup {
+  flex: none;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  background: var(--warning-bg);
+  color: #7a5a12;
+}
+.linhaDup td { background: rgba(201, 138, 26, 0.09); }
+.linhaDup:hover td { background: rgba(201, 138, 26, 0.14); }
 
 /* ---- Rodapé + botões --------------------------------------------- */
 .rodape {

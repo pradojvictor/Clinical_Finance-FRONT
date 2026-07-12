@@ -1,14 +1,41 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../lib/auth'
 import logo from '../assets/logo.jpeg'
 import Icon from './ui/Icon'
 import AuthModal from './AuthModal'
 import styles from './Navbar.module.css'
 
-/** Navbar do site público. O botão abre o modal de login/cadastro
-    (serve tanto para clientes quanto para funcionários). */
+const primeiroNome = (nome: string) => nome.trim().split(/\s+/)[0] ?? nome
+
+/** Navbar do site público. Deslogado: botão Entrar/Cadastrar (abre o modal).
+    Logado (cliente ou staff): botão de usuário com menu (Meus dados / Sair). */
 export default function Navbar() {
-  const [aberto, setAberto] = useState(false)
+  const { user, sair } = useAuth()
+  const navigate = useNavigate()
+  const [aberto, setAberto] = useState(false) // modal de login
+  const [menu, setMenu] = useState(false) // dropdown do usuário
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Clicar fora fecha o menu do usuário.
+  useEffect(() => {
+    if (!menu) return
+    const onDoc = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenu(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [menu])
+
+  const irDados = () => {
+    setMenu(false)
+    navigate(user?.perfil === 'cliente' ? '/minha-conta' : '/sistema')
+  }
+  const onSair = async () => {
+    setMenu(false)
+    await sair()
+    navigate('/')
+  }
 
   return (
     <header className={styles.nav}>
@@ -17,10 +44,39 @@ export default function Navbar() {
           <img src={logo} alt="Clinleste" className={styles.logo} />
         </Link>
 
-        <button type="button" className={styles.entrar} onClick={() => setAberto(true)}>
-          <Icon name="user" size={18} />
-          <span>Entrar / Cadastrar</span>
-        </button>
+        {user ? (
+          <div className={styles.userWrap} ref={menuRef}>
+            <button
+              type="button"
+              className={styles.userBtn}
+              onClick={() => setMenu((m) => !m)}
+              aria-haspopup="menu"
+              aria-expanded={menu}
+            >
+              <span className={styles.avatar}>
+                <Icon name="user" size={18} />
+              </span>
+              <span className={styles.userNome}>{primeiroNome(user.nome)}</span>
+              <Icon name="chevron" size={16} className={menu ? styles.chevAberto : styles.chev} />
+            </button>
+
+            {menu && (
+              <div className={styles.menu} role="menu">
+                <button type="button" className={styles.menuItem} onClick={irDados} role="menuitem">
+                  <Icon name="user" size={16} /> Meus dados
+                </button>
+                <button type="button" className={styles.menuItem} onClick={onSair} role="menuitem">
+                  <Icon name="logout" size={16} /> Sair
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button type="button" className={styles.entrar} onClick={() => setAberto(true)}>
+            <Icon name="user" size={18} />
+            <span>Entrar / Cadastrar</span>
+          </button>
+        )}
       </div>
 
       <AuthModal aberto={aberto} onClose={() => setAberto(false)} />

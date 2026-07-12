@@ -9,6 +9,7 @@ import {
   type Banco,
   type Forma,
   type NovaEntrada,
+  type VerificacaoImport,
 } from '../lib/api'
 import i from './ImportarModal.module.css'
 
@@ -23,6 +24,14 @@ const FORMAS: Forma[] = ['pix', 'debito', 'credito', 'especie']
 const brl = (c: number) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const dataBR = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '—')
 const msg = (x: unknown) => (x instanceof ApiError ? x.message : 'Ocorreu um erro.')
+/** ISO timestamp -> DD/MM/AAAA (data da importação anterior). */
+const quandoBR = (iso: string) => new Date(iso).toLocaleDateString('pt-BR')
+
+/** SHA-256 dos bytes do arquivo -> hex (identifica arquivo idêntico). */
+async function hashArquivo(buf: ArrayBuffer): Promise<string> {
+  const h = await crypto.subtle.digest('SHA-256', buf)
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
 
 interface Linha {
   nome: string
@@ -31,6 +40,7 @@ interface Linha {
   forma: Forma | ''
   banco_id: string
   status: 'cadastrado' | 'novo'
+  duplicada: boolean
 }
 
 function pick(row: Record<string, unknown>, ...nomes: string[]): unknown {
@@ -64,6 +74,8 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
   const [resultado, setResultado] = useState<{ criadas: number; pacientes_novos: number } | null>(null)
   const [bulkForma, setBulkForma] = useState<Forma | ''>('')
   const [bulkBanco, setBulkBanco] = useState('')
+  const [verif, setVerif] = useState<VerificacaoImport | null>(null)
+  const [arquivo, setArquivo] = useState<{ nome: string; hash: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -95,20 +107,35 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
 
       if (brutas.length === 0) throw new Error('Nenhuma linha com nome e valor encontrada.')
 
-      // Verifica quais pacientes já existem (por nome exato).
-      const comStatus: Linha[] = await Promise.all(
-        brutas.map(async (b) => {
-          let status: Linha['status'] = 'novo'
-          try {
-            const r = await pacientesApi.buscar(b.nome)
-            if (r.pacientes.some((p) => p.nome.toLowerCase() === b.nome.toLowerCase())) status = 'cadastrado'
-          } catch {
-            /* ignore */
-          }
-          return { ...b, forma: '' as const, banco_id: '', status }
-        }),
-      )
-      setLinhas(comStatus)
+      // Em paralelo: status de cada paciente + verificação de reimportação/duplicatas.
+      const hash = await hashArquivo(buf)
+      const [comStatus, verificacao] = await Promise.all([
+        // Verifica quais pacientes já existem (por nome exato).
+        Promise.all(
+          brutas.map(async (b): Promise<Linha> => {
+            let status: Linha['status'] = 'novo'
+            try {
+              const r = await pacientesApi.buscar(b.nome)
+              if (r.pacientes.some((p) => p.nome.toLowerCase() === b.nome.toLowerCase())) status = 'cadastrado'
+            } catch {
+              /* ignore */
+            }
+            return { ...b, forma: '' as const, banco_id: '', status, duplicada: false }
+          }),
+        ),
+        entradasApi
+          .verificarImportacao(
+            file.name,
+            hash,
+            brutas.map((b) => ({ nome: b.nome, data: b.data || undefined, valor_centavos: b.valor_centavos })),
+          )
+          .catch(() => null),
+      ])
+
+      const dups = new Set((verificacao?.linhas_duplicadas ?? []).map((d) => d.indice))
+      setLinhas(comStatus.map((l, idx) => (dups.has(idx) ? { ...l, duplicada: true } : l)))
+      setVerif(verificacao)
+      setArquivo({ nome: file.name, hash })
     } catch (x) {
       setErro(x instanceof Error ? x.message : 'Não foi possível ler a planilha.')
     } finally {
@@ -124,6 +151,9 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
       ls ? ls.map((l) => ({ ...l, forma: bulkForma || l.forma, banco_id: bulkBanco || l.banco_id })) : ls,
     )
 
+  const qtdDuplicadas = linhas?.filter((l) => l.duplicada).length ?? 0
+  const removerDuplicadas = () => setLinhas((ls) => (ls ? ls.filter((l) => !l.duplicada) : ls))
+
   const registrar = async () => {
     if (!linhas) return
     setErro(null)
@@ -137,7 +167,7 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
     }))
     setEnviando(true)
     try {
-      const r = await entradasApi.lote(payload)
+      const r = await entradasApi.lote(payload, arquivo ? { arquivo_nome: arquivo.nome, conteudo_hash: arquivo.hash } : undefined)
       setResultado(r)
     } catch (x) {
       setErro(msg(x))
@@ -181,6 +211,33 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
             </div>
           ) : (
             <>
+              {/* Avisos de reimportação / duplicatas (após o parse). */}
+              {verif?.arquivo_conteudo_igual && (
+                <div className={i.alertaForte}>
+                  <strong>Arquivo já importado.</strong> Este mesmo conteúdo foi importado em{' '}
+                  {quandoBR(verif.arquivo_conteudo_igual.criado_em)}
+                  {verif.arquivo_conteudo_igual.arquivo_nome !== arquivo?.nome
+                    ? ` (como “${verif.arquivo_conteudo_igual.arquivo_nome}”)`
+                    : ''}
+                  . Registrar de novo vai duplicar as entradas.
+                </div>
+              )}
+              {!verif?.arquivo_conteudo_igual && verif?.arquivo_nome_igual && (
+                <div className={i.alerta}>
+                  <strong>Nome repetido.</strong> Um arquivo com este nome já foi importado em{' '}
+                  {quandoBR(verif.arquivo_nome_igual.criado_em)} — o conteúdo agora é diferente.
+                </div>
+              )}
+              {qtdDuplicadas > 0 && (
+                <div className={i.alerta}>
+                  <strong>{qtdDuplicadas} de {linhas.length} linha(s)</strong> já constam como entradas
+                  (mesmo paciente, data e valor) — <span className={i.marcador}>destacadas</span> abaixo.
+                  <button type="button" className={i.alertaBtn} onClick={removerDuplicadas}>
+                    Remover as {qtdDuplicadas} duplicada(s)
+                  </button>
+                </div>
+              )}
+
               <div className={i.bulk}>
                 <span className={i.bulkLabel}>Aplicar a todas:</span>
                 <select className={i.selectSm} value={bulkForma} onChange={(e) => setBulkForma(e.target.value as Forma | '')}>
@@ -203,10 +260,11 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
                   </thead>
                   <tbody>
                     {linhas.map((l, idx) => (
-                      <tr key={idx}>
+                      <tr key={idx} className={l.duplicada ? i.linhaDup : undefined}>
                         <td>
                           <div className={i.pacCel}>
                             <input className={i.inputCel} value={l.nome} onChange={(e) => setLinha(idx, { nome: e.target.value })} />
+                            {l.duplicada && <span className={i.badgeDup} title="Já existe uma entrada com este paciente, data e valor">duplicada</span>}
                             <span className={l.status === 'cadastrado' ? i.badgeOk : i.badgeNovo}>{l.status}</span>
                           </div>
                         </td>

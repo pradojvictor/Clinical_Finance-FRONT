@@ -11,8 +11,10 @@ export default function Sidebar() {
   const [aberto, setAberto] = useState(false)
   const railRef = useRef<HTMLDivElement>(null)
 
-  // Só mostra as páginas permitidas ao perfil do usuário.
-  const itens = NAV_ITEMS.filter((item) => user !== null && item.roles.includes(user.perfil))
+  // Só mostra as páginas permitidas ao perfil do usuário (cliente não usa o trilho).
+  const itens = NAV_ITEMS.filter(
+    (item) => user !== null && user.perfil !== 'cliente' && item.roles.includes(user.perfil),
+  )
 
   // Clicar fora do trilho recolhe o menu.
   useEffect(() => {

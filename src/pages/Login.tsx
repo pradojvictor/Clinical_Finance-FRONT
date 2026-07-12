@@ -19,16 +19,16 @@ export default function Login() {
 
   // Enquanto verifica a sessão, evita piscar o formulário.
   if (carregando) return <Splash texto="Verificando sessão…" />
-  // Já autenticado? vai direto pro sistema.
-  if (user) return <Navigate to="/sistema" replace />
+  // Já autenticado? staff vai pro sistema; cliente vai pra sua área.
+  if (user) return <Navigate to={user.perfil === 'cliente' ? '/minha-conta' : '/sistema'} replace />
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setErro(null)
     setEnviando(true)
     try {
-      await entrar(login.trim(), senha)
-      navigate('/sistema', { replace: true })
+      const u = await entrar(login.trim(), senha)
+      navigate(u.perfil === 'cliente' ? '/minha-conta' : '/sistema', { replace: true })
     } catch (err) {
       setErro(
         err instanceof ApiError ? err.message : 'Não foi possível entrar. Tente novamente.',

@@ -43,6 +43,7 @@
   --pay-pix:           #2fae9b;   /* pix        */
   --pay-especie:       #3f9e57;   /* espécie    */
   --pay-debito:        #5a8cb5;   /* débito     */
+  --pay-credito:       #8a76c9;   /* crédito    */
 
   /* ---- Estados -------------------------------------------------- */
   --success:           #2f9e5f;

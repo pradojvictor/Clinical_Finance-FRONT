@@ -1,8 +1,10 @@
-import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Icon from '../components/ui/Icon'
+import SeletorMesAno from '../components/ui/SeletorMesAno'
+import { periodoMes } from '../lib/format'
 import {
   ApiError,
   bancosApi,
@@ -49,23 +51,33 @@ const COLUNAS = ['Data', 'Paciente', 'Forma', 'Banco', 'Valor', 'Líquido']
 const ImportarModal = lazy(() => import('./ImportarModal'))
 
 export default function Entradas() {
+  const agora = new Date()
+  const [mes, setMes] = useState(agora.getMonth() + 1)
+  const [ano, setAno] = useState(agora.getFullYear())
   const [entradas, setEntradas] = useState<EntradaDetalhe[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [modal, setModal] = useState(false)
   const [importar, setImportar] = useState(false)
 
-  const carregar = () => {
+  const carregar = useCallback(() => {
+    const { de, ate } = periodoMes(ano, mes)
+    setEntradas(null)
+    setErro(null)
     entradasApi
-      .listar()
+      .listar({ de, ate })
       .then((r) => setEntradas(r.entradas))
       .catch((x) => setErro(msg(x)))
-  }
-  useEffect(carregar, [])
+  }, [ano, mes])
+  useEffect(() => {
+    carregar()
+  }, [carregar])
 
   return (
     <div className={s.stack}>
       <div className={s.toolbar}>
-        <div className={s.filters} />
+        <div className={s.filters}>
+          <SeletorMesAno mes={mes} ano={ano} onMes={setMes} onAno={setAno} />
+        </div>
         <button type="button" className={s.btn} onClick={() => setImportar(true)}>
           <Icon name="proc" size={18} /> Importar planilha
         </button>
