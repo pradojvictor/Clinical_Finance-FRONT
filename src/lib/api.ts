@@ -100,6 +100,14 @@ export const clientesApi = {
   listar: (q?: string) =>
     req<{ clientes: ClienteLista[] }>(`/clientes${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   eu: () => req<{ cliente: ClienteDados }>('/clientes/eu'),
+  atendimentos: () =>
+    req<{ atendimentos: AtendimentoCliente[]; total_centavos: number; tem_cpf: boolean }>('/clientes/atendimentos'),
+}
+export interface AtendimentoCliente {
+  id: number
+  data: string
+  forma: Forma
+  valor_centavos: number
 }
 
 // ---- Admin: bancos e taxas ----------------------------------------
@@ -157,6 +165,7 @@ export interface EntradaDetalhe {
   valor_centavos: number
   taxa_bp: number
   valor_liquido_centavos: number
+  banco_id: number | null
   paciente_nome: string | null
   banco_nome: string | null
   operador_nome: string
@@ -216,6 +225,18 @@ export const entradasApi = {
       method: 'POST',
       body: JSON.stringify({ arquivo_nome, conteudo_hash, linhas }),
     }),
+  editar: (id: number, dados: EditarEntrada, senha: string) =>
+    req<{ entrada: EntradaDetalhe }>(`/entradas/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ...dados, senha }),
+    }),
+}
+export interface EditarEntrada {
+  data?: string
+  forma?: Forma
+  valor_centavos?: number
+  banco_id?: number | null
+  observacao?: string
 }
 
 // ---- Saídas -------------------------------------------------------
@@ -245,10 +266,83 @@ export interface NovaSaida {
   subcategoria_id?: number | null
   observacao?: string
 }
+export interface EditarSaida {
+  data?: string
+  forma?: FormaSaida
+  valor_centavos?: number
+  banco_id?: number | null
+  categoria_id?: number
+  subcategoria_id?: number | null
+  observacao?: string
+}
 export const saidasApi = {
-  listar: () => req<{ saidas: SaidaDetalhe[] }>('/saidas'),
+  listar: (params?: { de?: string; ate?: string }) => {
+    const qs = new URLSearchParams()
+    if (params?.de) qs.set('de', params.de)
+    if (params?.ate) qs.set('ate', params.ate)
+    const q = qs.toString()
+    return req<{ saidas: SaidaDetalhe[] }>(`/saidas${q ? `?${q}` : ''}`)
+  },
   criar: (dados: NovaSaida) =>
     req<{ saida: SaidaDetalhe }>('/saidas', { method: 'POST', body: JSON.stringify(dados) }),
+  editar: (id: number, dados: EditarSaida, senha: string) =>
+    req<{ saida: SaidaDetalhe }>(`/saidas/${id}`, { method: 'PATCH', body: JSON.stringify({ ...dados, senha }) }),
+}
+
+// ---- Saldos por local (caixa + bancos) ---------------------------
+export interface SaldoLocal {
+  banco_id: number | null // null = caixa (espécie)
+  nome: string
+  saldo_centavos: number
+  inicial_centavos: number
+}
+export const saldosApi = {
+  obter: () => req<{ saldos: SaldoLocal[]; total_centavos: number }>('/saldos'),
+  definirInicial: (banco_id: number | null, valor_centavos: number, senha: string) =>
+    req<{ ok: boolean }>('/saldos/inicial', {
+      method: 'PUT',
+      body: JSON.stringify({ banco_id, valor_centavos, senha }),
+    }),
+}
+
+// ---- Auditoria (registros / logs legíveis) -----------------------
+export interface RegistroAuditoria {
+  id: number
+  acao: string
+  entidade: string | null
+  entidade_id: string | null
+  dados: Record<string, unknown> | null
+  usuario_nome: string | null
+  criado_em: string
+}
+export const auditoriaApi = {
+  listar: (limit = 300) => req<{ registros: RegistroAuditoria[] }>(`/auditoria?limit=${limit}`),
+}
+
+// ---- Transferências (movimentação entre caixa e bancos) ----------
+export interface TransferenciaDetalhe {
+  id: number
+  data: string
+  valor_centavos: number
+  origem_banco_id: number | null
+  destino_banco_id: number | null
+  origem_nome: string | null // null = caixa (espécie)
+  destino_nome: string | null
+  observacao: string | null
+  operador_nome: string
+}
+export interface NovaTransferencia {
+  valor_centavos: number
+  data?: string
+  origem_banco_id?: number | null // null/ausente = caixa (espécie)
+  destino_banco_id?: number | null
+  observacao?: string
+}
+export const transferenciasApi = {
+  listar: () => req<{ transferencias: TransferenciaDetalhe[] }>('/transferencias'),
+  criar: (dados: NovaTransferencia) =>
+    req<{ transferencia: TransferenciaDetalhe }>('/transferencias', { method: 'POST', body: JSON.stringify(dados) }),
+  excluir: (id: number) => req<{ ok: boolean }>(`/transferencias/${id}`, { method: 'DELETE' }),
 }
 
 // ---- Categorias de saída (árvore central > categoria > subcategoria) ----

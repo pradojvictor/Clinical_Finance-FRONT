@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { ApiError, balancoApi, type Balanco as BalancoT, type Forma, type ResumoForma } from '../lib/api'
+import { ApiError, balancoApi, saldosApi, type Balanco as BalancoT, type Forma, type ResumoForma, type SaldoLocal } from '../lib/api'
 import { FORMA_LABEL, brl, periodoAno, periodoMes } from '../lib/format'
 import SeletorMesAno from '../components/ui/SeletorMesAno'
 import s from './page.module.css'
@@ -23,8 +23,19 @@ export default function Balanco() {
   const [ano, setAno] = useState(agora.getFullYear())
   const [comTaxa, setComTaxa] = useState(true)
   const [dados, setDados] = useState<BalancoT | null>(null)
+  const [saldos, setSaldos] = useState<SaldoLocal[] | null>(null)
+  const [totalSaldos, setTotalSaldos] = useState(0)
   const [erro, setErro] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(false)
+
+  // Onde o dinheiro está hoje (saldo atual por local — não depende do período).
+  useEffect(() => {
+    let vivo = true
+    saldosApi.obter().then((r) => {
+      if (vivo) { setSaldos(r.saldos); setTotalSaldos(r.total_centavos) }
+    }).catch(() => {})
+    return () => { vivo = false }
+  }, [])
 
   const { de, ate } = useMemo(
     () => (periodo === 'mes' ? periodoMes(ano, mes) : periodoAno(ano)),
@@ -116,6 +127,31 @@ export default function Balanco() {
           )
         })}
       </div>
+
+      {/* Onde está o dinheiro (saldo atual por local) */}
+      {saldos && saldos.length > 0 && (
+        <div className={b.onde}>
+          <div className={b.ondeHead}>
+            <span className={b.ondeTit}>Onde está o dinheiro</span>
+            <span className={b.ondeNota}>saldo atual — espécie e bancos</span>
+          </div>
+          <div className={b.ondeLista}>
+            {saldos.map((x) => (
+              <div key={x.banco_id ?? 'caixa'} className={b.ondeRow}>
+                <span className={b.ondeNome}>
+                  <span className={b.dot} style={{ background: x.banco_id == null ? 'var(--pay-especie)' : 'var(--brand-blue)' }} />
+                  {x.nome}
+                </span>
+                <span className={x.saldo_centavos < 0 ? b.neg : ''}>{brl(x.saldo_centavos)}</span>
+              </div>
+            ))}
+            <div className={b.ondeTotal}>
+              <span>Total</span>
+              <span>{brl(totalSaldos)}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {carregando && <div className={b.carregando}>Atualizando…</div>}
     </div>

@@ -7,6 +7,7 @@ import Icon from '../components/ui/Icon'
 import { useAuth } from '../lib/auth'
 import {
   ApiError,
+  auditoriaApi,
   bancosApi,
   categoriasSaidaApi,
   taxasApi,
@@ -17,19 +18,22 @@ import {
   type NivelCategoriaSaida,
   type NovoUsuario,
   type Perfil,
+  type RegistroAuditoria,
   type Taxa,
   type UsuarioAdmin,
 } from '../lib/api'
+import { brl } from '../lib/format'
 import s from './page.module.css'
 import a from './Admin.module.css'
 import e from './Entradas.module.css'
 
-type Aba = 'usuarios' | 'bancos' | 'taxas' | 'categorias'
+type Aba = 'usuarios' | 'bancos' | 'taxas' | 'categorias' | 'registros'
 const ABAS: { id: Aba; label: string }[] = [
   { id: 'usuarios', label: 'Usuários' },
   { id: 'bancos', label: 'Bancos' },
   { id: 'taxas', label: 'Taxas' },
   { id: 'categorias', label: 'Categorias de saída' },
+  { id: 'registros', label: 'Registros' },
 ]
 
 const FORMAS: { forma: Forma; label: string }[] = [
@@ -66,6 +70,7 @@ export default function Admin() {
       {aba === 'bancos' && <BancosPanel />}
       {aba === 'taxas' && <TaxasPanel />}
       {aba === 'categorias' && <CategoriasSaidaPanel />}
+      {aba === 'registros' && <AuditoriaPanel />}
     </div>
   )
 }
@@ -251,6 +256,171 @@ function TaxasPanel() {
         </table>
       </div>
       <p className={a.nota}>Salva ao sair do campo. Use ponto ou vírgula (ex.: 3,5). Espécie normalmente é 0%.</p>
+    </Card>
+  )
+}
+
+/* ---- Registros (auditoria legível) -------------------------------- */
+type CategoriaLog = 'dinheiro' | 'clientes' | 'profissionais' | 'outros'
+
+const CAT_LABEL: Record<CategoriaLog, string> = {
+  dinheiro: 'Dinheiro',
+  clientes: 'Clientes',
+  profissionais: 'Profissionais',
+  outros: 'Outros',
+}
+const CAT_TONE: Record<CategoriaLog, BadgeTone> = {
+  dinheiro: 'success',
+  clientes: 'blue',
+  profissionais: 'warning',
+  outros: 'neutral',
+}
+const FILTROS: { id: CategoriaLog | 'todos'; label: string }[] = [
+  { id: 'todos', label: 'Tudo' },
+  { id: 'dinheiro', label: 'Dinheiro' },
+  { id: 'clientes', label: 'Clientes' },
+  { id: 'profissionais', label: 'Profissionais' },
+  { id: 'outros', label: 'Outros' },
+]
+
+const TEXTO_ACAO: Record<string, string> = {
+  'entrada.criar': 'Registrou uma entrada',
+  'entrada.lote': 'Importou entradas por planilha',
+  'entrada.editar': 'Editou uma entrada',
+  'entrada.excluir': 'Excluiu uma entrada',
+  'saida.criar': 'Registrou uma saída',
+  'saida.editar': 'Editou uma saída',
+  'saida.excluir': 'Excluiu uma saída',
+  'transferencia.criar': 'Registrou uma transferência',
+  'transferencia.excluir': 'Excluiu uma transferência',
+  'saldo_inicial.definir': 'Definiu o saldo inicial de um local',
+  'banco.criar': 'Criou um banco',
+  'banco.editar': 'Editou um banco',
+  'banco.excluir': 'Excluiu um banco',
+  'taxa.editar': 'Alterou uma taxa',
+  'categoria_saida.criar': 'Criou uma categoria de saída',
+  'categoria_saida.editar': 'Editou uma categoria de saída',
+  'categoria_saida.excluir': 'Excluiu uma categoria de saída',
+  'usuario.criar': 'Criou um profissional',
+  'usuario.editar': 'Editou um profissional',
+  'usuario.senha': 'Trocou a senha de um profissional',
+  'usuario.desativar': 'Desativou um profissional',
+  'cliente.criar': 'Cadastrou um cliente',
+  'cliente.registro': 'Cliente se cadastrou no site',
+  'cliente.login': 'Cliente entrou',
+  'cliente.logout': 'Cliente saiu',
+  login: 'Entrou no sistema',
+  'login.falha': 'Tentativa de login falhou',
+  logout: 'Saiu do sistema',
+}
+
+function categoriaDe(acao: string): CategoriaLog {
+  if (/^(entrada|saida|transferencia|saldo_inicial|banco|taxa|categoria_saida)/.test(acao)) return 'dinheiro'
+  if (acao.startsWith('cliente')) return 'clientes'
+  if (acao.startsWith('usuario') || acao === 'login' || acao === 'logout' || acao === 'login.falha') return 'profissionais'
+  return 'outros'
+}
+function textoDe(acao: string): string {
+  return TEXTO_ACAO[acao] ?? acao.replace(/[._]/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+}
+function detalheDe(dados: Record<string, unknown> | null): string {
+  if (!dados) return ''
+  const p: string[] = []
+  if (typeof dados.valor_centavos === 'number') p.push(brl(dados.valor_centavos))
+  if (typeof dados.criadas === 'number') p.push(`${dados.criadas} entrada(s)`)
+  if (typeof dados.pacientes_novos === 'number' && dados.pacientes_novos > 0) p.push(`${dados.pacientes_novos} paciente(s) novo(s)`)
+  if (typeof dados.email === 'string') p.push(dados.email)
+  if (typeof dados.login === 'string') p.push(`@${dados.login}`)
+  if (typeof dados.nome === 'string') p.push(dados.nome)
+  if (typeof dados.perfil === 'string') p.push(dados.perfil)
+  return p.join(' · ')
+}
+function quandoHora(iso: string): string {
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  })
+}
+
+const PAGINA_LOG = 10
+
+function AuditoriaPanel() {
+  const [regs, setRegs] = useState<RegistroAuditoria[] | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [filtro, setFiltro] = useState<CategoriaLog | 'todos'>('todos')
+  const [busca, setBusca] = useState('')
+  const [visiveis, setVisiveis] = useState(PAGINA_LOG)
+
+  useEffect(() => {
+    auditoriaApi.listar(300).then((r) => setRegs(r.registros)).catch((x) => setErro(msg(x)))
+  }, [])
+  // Volta pro topo (10) quando muda o filtro ou a busca.
+  useEffect(() => setVisiveis(PAGINA_LOG), [filtro, busca])
+
+  const q = busca.trim().toLowerCase()
+  const filtrados = (regs ?? []).filter((r) => {
+    if (filtro !== 'todos' && categoriaDe(r.acao) !== filtro) return false
+    if (!q) return true
+    const texto = `${textoDe(r.acao)} ${detalheDe(r.dados)} ${r.usuario_nome ?? ''}`.toLowerCase()
+    return texto.includes(q)
+  })
+  const mostrados = filtrados.slice(0, visiveis)
+
+  return (
+    <Card
+      title="Registros de atividade"
+      action={<span className={a.hint}>tudo que acontece no sistema</span>}
+    >
+      {erro && <div className={a.erro}>{erro}</div>}
+      <div className={a.chips}>
+        {FILTROS.map((f) => (
+          <button key={f.id} type="button" className={`${a.chip} ${filtro === f.id ? a.chipOn : ''}`} onClick={() => setFiltro(f.id)}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <input
+        className={s.input}
+        type="search"
+        placeholder="Buscar nos registros…"
+        value={busca}
+        onChange={(ev) => setBusca(ev.target.value)}
+        style={{ marginBottom: 'var(--sp-3)', width: '100%' }}
+      />
+
+      {regs === null ? (
+        <div className={a.carregando}>Carregando…</div>
+      ) : filtrados.length === 0 ? (
+        <p className={a.nota}>Nada por aqui ainda.</p>
+      ) : (
+        <>
+          <ul className={a.logLista}>
+            {mostrados.map((r) => {
+              const cat = categoriaDe(r.acao)
+              const det = detalheDe(r.dados)
+              return (
+                <li key={r.id} className={a.logItem}>
+                  <span className={a.logBadge}><Badge tone={CAT_TONE[cat]}>{CAT_LABEL[cat]}</Badge></span>
+                  <div className={a.logCorpo}>
+                    <span className={a.logTexto}>
+                      {textoDe(r.acao)}
+                      {det && <span className={a.logDetalhe}> — {det}</span>}
+                    </span>
+                    <span className={a.logMeta}>{r.usuario_nome ?? 'Sistema / público'} · {quandoHora(r.criado_em)}</span>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+          <div className={a.verMaisWrap}>
+            <span className={a.nota}>Mostrando {mostrados.length} de {filtrados.length}</span>
+            {visiveis < filtrados.length && (
+              <button type="button" className={a.linkBtn} onClick={() => setVisiveis((v) => v + PAGINA_LOG)}>
+                Ver mais
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </Card>
   )
 }

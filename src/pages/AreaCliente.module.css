@@ -11,9 +11,15 @@
     var(--bg);
 }
 
-.card {
+.wrap {
   width: 100%;
   max-width: 34rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+.card {
+  width: 100%;
   background: var(--surface);
   border: 0.0625rem solid var(--border);
   border-radius: var(--radius-xl);
@@ -100,4 +106,43 @@
   margin-top: var(--sp-2);
   font-size: var(--fs-sm);
   color: var(--text-soft);
+}
+
+/* ---- Meus atendimentos ------------------------------------------- */
+.secHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.totalTag {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+.tabela th {
+  text-align: left;
+  padding: 0.5rem 0.25rem;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-soft);
+  font-weight: 700;
+  border-bottom: 0.0625rem solid var(--border);
+}
+.tabela td {
+  padding: 0.625rem 0.25rem;
+  border-bottom: 0.0625rem solid var(--border);
+  color: var(--text);
+}
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

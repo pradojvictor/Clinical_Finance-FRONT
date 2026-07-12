@@ -15,6 +15,7 @@ const Inicio = lazy(() => import('./pages/Inicio'))
 const Entradas = lazy(() => import('./pages/Entradas'))
 const Saidas = lazy(() => import('./pages/Saidas'))
 const Clientes = lazy(() => import('./pages/Clientes'))
+const Transferencias = lazy(() => import('./pages/Transferencias'))
 const Procedimentos = lazy(() => import('./pages/Procedimentos'))
 const Balanco = lazy(() => import('./pages/Balanco'))
 const Admin = lazy(() => import('./pages/Admin'))
@@ -44,6 +45,7 @@ export default function App() {
               <Route path="entradas" element={<Entradas />} />
               <Route path="saidas" element={<Saidas />} />
               <Route path="clientes" element={<Clientes />} />
+              <Route path="transferencias" element={<Transferencias />} />
               <Route path="procedimentos" element={<Procedimentos />} />
               <Route path="balanco" element={<Balanco />} />
               <Route path="admin" element={<Admin />} />

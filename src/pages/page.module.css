@@ -119,6 +119,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Rodapé de "ver mais" (paginação incremental) */
+.verMais {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  font-size: var(--fs-sm);
+}
+
 /* Estado vazio dentro de tabela/cartão */
 .empty {
   display: flex;

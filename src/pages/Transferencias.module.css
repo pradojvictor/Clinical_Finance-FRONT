@@ -1,0 +1,70 @@
+.saldos {
+  display: flex;
+  flex-direction: column;
+}
+.saldoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 0.75rem 0;
+  border-bottom: 0.0625rem solid var(--border);
+}
+.saldoNome {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: 500;
+  color: var(--text);
+}
+.dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radius-pill);
+  background: var(--brand-blue);
+  flex: none;
+}
+.dotCaixa {
+  background: var(--pay-especie);
+}
+.saldoValor {
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.saldoNeg {
+  font-weight: 700;
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+}
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding-top: 0.875rem;
+  margin-top: 0.375rem;
+  border-top: 0.125rem solid var(--border-strong);
+}
+.totalLabel {
+  font-weight: 700;
+  color: var(--text);
+}
+.totalValor {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--brand-blue-700);
+  font-variant-numeric: tabular-nums;
+}
+.acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  margin-top: var(--sp-5);
+  flex-wrap: wrap;
+}
+.aviso {
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+  margin-bottom: var(--sp-3);
+}

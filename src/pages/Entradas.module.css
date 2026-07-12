@@ -7,6 +7,14 @@
 .vazio {
   color: var(--text-soft);
 }
+.acaoLink {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--brand-blue-700);
+}
+.acaoLink:hover {
+  text-decoration: underline;
+}
 .erro {
   padding: 0.5625rem 0.75rem;
   border-radius: var(--radius-md);

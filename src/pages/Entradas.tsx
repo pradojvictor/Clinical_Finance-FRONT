@@ -12,6 +12,7 @@ import {
   pacientesApi,
   taxasApi,
   type Banco,
+  type EditarEntrada,
   type EntradaDetalhe,
   type Forma,
   type NovaEntrada,
@@ -46,7 +47,7 @@ function parseCentavos(str: string): number {
   return Number.isFinite(n) ? Math.round(n * 100) : 0
 }
 
-const COLUNAS = ['Data', 'Paciente', 'Forma', 'Banco', 'Valor', 'Líquido']
+const COLUNAS = ['Data', 'Paciente', 'Forma', 'Banco', 'Valor', 'Líquido', '']
 
 const ImportarModal = lazy(() => import('./ImportarModal'))
 
@@ -55,9 +56,11 @@ export default function Entradas() {
   const [mes, setMes] = useState(agora.getMonth() + 1)
   const [ano, setAno] = useState(agora.getFullYear())
   const [entradas, setEntradas] = useState<EntradaDetalhe[] | null>(null)
+  const [busca, setBusca] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [modal, setModal] = useState(false)
   const [importar, setImportar] = useState(false)
+  const [editando, setEditando] = useState<EntradaDetalhe | null>(null)
 
   const carregar = useCallback(() => {
     const { de, ate } = periodoMes(ano, mes)
@@ -72,11 +75,24 @@ export default function Entradas() {
     carregar()
   }, [carregar])
 
+  const q = busca.trim().toLowerCase()
+  const filtradas = (entradas ?? []).filter((en) => {
+    if (!q) return true
+    return `${en.paciente_nome ?? ''} ${FORMA_LABEL[en.forma]} ${en.banco_nome ?? ''}`.toLowerCase().includes(q)
+  })
+
   return (
     <div className={s.stack}>
       <div className={s.toolbar}>
         <div className={s.filters}>
           <SeletorMesAno mes={mes} ano={ano} onMes={setMes} onAno={setAno} />
+          <input
+            className={s.input}
+            type="search"
+            placeholder="Buscar paciente, forma, banco…"
+            value={busca}
+            onChange={(ev) => setBusca(ev.target.value)}
+          />
         </div>
         <button type="button" className={s.btn} onClick={() => setImportar(true)}>
           <Icon name="proc" size={18} /> Importar planilha
@@ -88,32 +104,32 @@ export default function Entradas() {
 
       <Card
         title="Entradas registradas"
-        action={<Badge tone="neutral">{entradas?.length ?? 0} registros</Badge>}
+        action={<Badge tone="neutral">{filtradas.length} registros</Badge>}
       >
         {erro && <div className={e.erro}>{erro}</div>}
         <div className={s.tableWrap}>
           <table className={s.table}>
             <thead>
               <tr>
-                {COLUNAS.map((c) => (
-                  <th key={c} className={c === 'Valor' || c === 'Líquido' ? s.num : undefined}>{c}</th>
+                {COLUNAS.map((c, i) => (
+                  <th key={i} className={c === 'Valor' || c === 'Líquido' ? s.num : undefined}>{c}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {entradas === null ? (
                 <tr><td colSpan={COLUNAS.length}><div className={e.carregando}>Carregando…</div></td></tr>
-              ) : entradas.length === 0 ? (
+              ) : filtradas.length === 0 ? (
                 <tr>
                   <td colSpan={COLUNAS.length}>
                     <div className={s.empty}>
-                      <span className={s.emptyTitle}>Nenhuma entrada ainda</span>
-                      <span className={s.emptyText}>Clique em “Nova entrada” para registrar.</span>
+                      <span className={s.emptyTitle}>{busca ? 'Nenhuma entrada encontrada' : 'Nenhuma entrada ainda'}</span>
+                      <span className={s.emptyText}>{busca ? 'Ajuste a busca.' : 'Clique em “Nova entrada” para registrar.'}</span>
                     </div>
                   </td>
                 </tr>
               ) : (
-                entradas.map((en) => (
+                filtradas.map((en) => (
                   <tr key={en.id}>
                     <td>{dataBR(en.data)}</td>
                     <td>{en.paciente_nome ?? <span className={e.vazio}>—</span>}</td>
@@ -121,6 +137,9 @@ export default function Entradas() {
                     <td>{en.banco_nome ?? <span className={e.vazio}>—</span>}</td>
                     <td className={s.num}>{brl(en.valor_centavos)}</td>
                     <td className={s.num}>{brl(en.valor_liquido_centavos)}</td>
+                    <td className={s.num}>
+                      <button type="button" className={e.acaoLink} onClick={() => setEditando(en)}>Editar</button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -134,6 +153,17 @@ export default function Entradas() {
           onClose={() => setModal(false)}
           onSalvo={() => {
             setModal(false)
+            carregar()
+          }}
+        />
+      )}
+
+      {editando && (
+        <EditarEntradaModal
+          entrada={editando}
+          onClose={() => setEditando(null)}
+          onSalvo={() => {
+            setEditando(null)
             carregar()
           }}
         />
@@ -309,11 +339,19 @@ function NovaEntradaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: 
             </div>
           </label>
 
-          {/* Forma + Banco */}
+          {/* Forma + Banco (espécie → vai para a caixa, banco bloqueado) */}
           <div className={e.linha2}>
             <label className={e.campo}>
               <span className={e.label}>Forma de pagamento</span>
-              <select className={e.input} value={forma} onChange={(ev) => setForma(ev.target.value as Forma | '')}>
+              <select
+                className={e.input}
+                value={forma}
+                onChange={(ev) => {
+                  const f = ev.target.value as Forma | ''
+                  setForma(f)
+                  if (f === 'especie') setBancoId('')
+                }}
+              >
                 <option value="">Selecione…</option>
                 {FORMAS.map((f) => (
                   <option key={f} value={f}>{FORMA_LABEL[f]}</option>
@@ -322,9 +360,14 @@ function NovaEntradaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: 
             </label>
             <label className={e.campo}>
               <span className={e.label}>Banco de destino</span>
-              <select className={e.input} value={bancoId} onChange={(ev) => setBancoId(ev.target.value)}>
-                <option value="">Selecione…</option>
-                {bancos.map((b) => (
+              <select
+                className={e.input}
+                value={forma === 'especie' ? '' : bancoId}
+                onChange={(ev) => setBancoId(ev.target.value)}
+                disabled={forma === 'especie'}
+              >
+                <option value="">{forma === 'especie' ? 'Caixa (espécie)' : 'Selecione…'}</option>
+                {forma !== 'especie' && bancos.map((b) => (
                   <option key={b.id} value={b.id}>{b.nome}</option>
                 ))}
               </select>
@@ -348,6 +391,131 @@ function NovaEntradaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: 
             <span className={e.dataNota}>Data: hoje (automática)</span>
             <button type="submit" className={e.submit} disabled={enviando}>
               {enviando ? 'Salvando…' : 'Registrar entrada'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+/* ---- Modal: editar entrada (só gestor, exige senha) --------------- */
+function EditarEntradaModal({ entrada, onClose, onSalvo }: { entrada: EntradaDetalhe; onClose: () => void; onSalvo: () => void }) {
+  const [data, setData] = useState(entrada.data.slice(0, 10))
+  const [valor, setValor] = useState((entrada.valor_centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 }))
+  const [forma, setForma] = useState<Forma>(entrada.forma)
+  const [bancoId, setBancoId] = useState(entrada.banco_id ? String(entrada.banco_id) : '')
+  const [observacao, setObservacao] = useState(entrada.observacao ?? '')
+  const [senha, setSenha] = useState('')
+  const [bancos, setBancos] = useState<Banco[]>([])
+  const [erro, setErro] = useState<string | null>(null)
+  const [enviando, setEnviando] = useState(false)
+
+  useEffect(() => {
+    bancosApi.listar().then((r) => setBancos(r.bancos.filter((b) => b.ativo))).catch(() => {})
+    const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
+
+  const onSubmit = async (ev: FormEvent) => {
+    ev.preventDefault()
+    setErro(null)
+    const centavos = parseCentavos(valor)
+    if (centavos <= 0) return setErro('Informe um valor válido.')
+    if (forma !== 'especie' && !bancoId) return setErro('Escolha o banco.')
+    if (!senha) return setErro('Digite sua senha para confirmar.')
+
+    const dados: EditarEntrada = {
+      data: data || undefined,
+      forma,
+      valor_centavos: centavos,
+      banco_id: forma === 'especie' ? null : Number(bancoId),
+      observacao: observacao.trim(),
+    }
+    setEnviando(true)
+    try {
+      await entradasApi.editar(entrada.id, dados, senha)
+      onSalvo()
+    } catch (x) {
+      setErro(msg(x))
+      setEnviando(false)
+    }
+  }
+
+  return createPortal(
+    <div className={e.backdrop} onMouseDown={onClose}>
+      <div className={e.modal} role="dialog" aria-modal="true" aria-label="Editar entrada" onMouseDown={(ev) => ev.stopPropagation()}>
+        <div className={e.head}>
+          <h2 className={e.titulo}>Editar entrada</h2>
+          <button type="button" className={e.fechar} onClick={onClose} aria-label="Fechar">×</button>
+        </div>
+        <form className={e.form} onSubmit={onSubmit} noValidate>
+          {erro && <div className={e.erro}>{erro}</div>}
+          {entrada.paciente_nome && <p className={e.dataNota}>Paciente: {entrada.paciente_nome}</p>}
+
+          <div className={e.linha2}>
+            <label className={e.campo}>
+              <span className={e.label}>Data</span>
+              <input className={e.input} type="date" value={data} onChange={(ev) => setData(ev.target.value)} />
+            </label>
+            <label className={e.campo}>
+              <span className={e.label}>Valor</span>
+              <div className={e.valorWrap}>
+                <span className={e.prefixo}>R$</span>
+                <input className={e.input} value={valor} onChange={(ev) => setValor(ev.target.value)} placeholder="0,00" inputMode="decimal" />
+              </div>
+            </label>
+          </div>
+
+          <div className={e.linha2}>
+            <label className={e.campo}>
+              <span className={e.label}>Forma de pagamento</span>
+              <select
+                className={e.input}
+                value={forma}
+                onChange={(ev) => {
+                  const f = ev.target.value as Forma
+                  setForma(f)
+                  if (f === 'especie') setBancoId('')
+                }}
+              >
+                {FORMAS.map((f) => <option key={f} value={f}>{FORMA_LABEL[f]}</option>)}
+              </select>
+            </label>
+            <label className={e.campo}>
+              <span className={e.label}>Banco de destino</span>
+              <select
+                className={e.input}
+                value={forma === 'especie' ? '' : bancoId}
+                onChange={(ev) => setBancoId(ev.target.value)}
+                disabled={forma === 'especie'}
+              >
+                <option value="">{forma === 'especie' ? 'Caixa (espécie)' : 'Selecione…'}</option>
+                {forma !== 'especie' && bancos.map((b) => <option key={b.id} value={b.id}>{b.nome}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <label className={e.campo}>
+            <span className={e.label}>Observação</span>
+            <input className={e.input} value={observacao} onChange={(ev) => setObservacao(ev.target.value)} />
+          </label>
+
+          <label className={e.campo}>
+            <span className={e.label}>Sua senha (confirmação)</span>
+            <input className={e.input} type="password" value={senha} onChange={(ev) => setSenha(ev.target.value)} placeholder="senha do gestor" autoComplete="current-password" />
+          </label>
+
+          <div className={e.rodape}>
+            <span className={e.dataNota}>A edição fica registrada nos logs</span>
+            <button type="submit" className={e.submit} disabled={enviando}>
+              {enviando ? 'Salvando…' : 'Salvar alterações'}
             </button>
           </div>
         </form>
