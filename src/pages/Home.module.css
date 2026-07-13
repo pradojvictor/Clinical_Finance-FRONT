@@ -41,26 +41,56 @@
     rgba(22, 27, 82, 0.22);
 }
 .heroContent {
-  position: relative;
-  z-index: 2;
-  text-align: center;
+/* 1. Faz o container ocupar 100% da largura da tela */
+  width: 100%; 
+  /* 2. Empurra todo o texto para o canto esquerdo */
+  text-align: left; 
   padding: 0 var(--sp-6);
-  color: #ffffff;
 }
 .heroTitle {
-  font-size: clamp(3.5rem, 14vw, 11rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 0.95;
-  color: #ffffff;
-  text-shadow: 0 0.25rem 2.5rem rgba(0, 0, 0, 0.35);
+  /* Mantemos o z-index para furar a camada escura */
+  position: relative;
+  z-index: 2;
+  
+  /* --- ESTILO GIGANTE DA IMAGEM --- */
+  font-size: clamp(5rem, 10vw, 15rem); 
+  font-weight: 900;
+  text-transform: uppercase;
+  
+  line-height: 0.85; 
+  letter-spacing: -0.04em; 
+  margin: 0; /* Clear existing margin first */
+  
+  /* A mágica da inversão */
+  color: #ffffff; 
+  mix-blend-mode: difference;
+
+  /* ===================================================================== */
+  /* 👇 O NOVO E CORRETO CONTROLE DE POSIÇÃO 👇 */
+  /* Adicionamos o controle aqui para mover TUDO (título e subtítulo).
+     Usamos margin-top, que é compatível com blend-mode.
+     - Positivo (ex: 50px, 8vh) empurra para BAIXO.
+     - Negativo (ex: -50px, -8vh) puxa para CIMA. */
+  --ajuste-vertical: 30vh; 
+  margin-top: var(--ajuste-vertical); /* Usa margin, NÃO transform */
+  /* Adicionamos uma margem inferior para o subtítulo não colar no título */
+  margin-bottom: 1.5rem; 
+  /* ===================================================================== */
 }
 .heroSub {
-  margin-top: var(--sp-4);
-  font-size: clamp(1rem, 2.2vw, 1.375rem);
+  /* Garante que o subtítulo também fique sobreposto e visível */
+  position: relative;
+  z-index: 2;
+  
+  /* Removemos a margin-top daqui, pois o título já tem margin-bottom */
+  margin-top: 0; 
+  
+  font-size: clamp(1.125rem, 2vw, 1.5rem);
   font-weight: 400;
   letter-spacing: 0.02em;
   color: rgba(255, 255, 255, 0.9);
+  
+  max-width: 600px;
 }
 
 /* Indicador de rolagem */
