@@ -5,6 +5,245 @@
 /* ===================================================================== */
 /* 👇 1. PRELOADER E BLOCOS QUE SOBEM 👇 */
 /* ===================================================================== */
+/* HTML: <div class="loader"></div> */
+/* .loader {
+  position: relative;
+  z-index: 10000;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.2em;
+  font-weight: bold;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+
+  width: 100px;
+  aspect-ratio: 1;
+  padding: 10px;
+  box-sizing: border-box;
+  display: grid;
+  background: transparent;
+  mix-blend-mode: darken;
+}
+.preloaderHidden .loader {
+  opacity: 0;
+}
+.loader:before,
+.loader:after{ 
+  content: "";
+  grid-area: 1/1; 
+  width: 40px;
+  height: 40px;
+  background: #74A0C3;
+  animation: l7 2s infinite;
+}
+.loader:after{ 
+  animation-delay: -1s;
+}
+@keyframes l7{
+  0%   {transform: translate(   0,0)}
+  25%  {transform: translate(100%,0)}
+  50%  {transform: translate(100%,100%)}
+  75%  {transform: translate(   0,100%)}
+  100% {transform: translate(   0,0)}
+} */
+
+/* 👇 segunda animação 👇 */
+/* ===================================================================== */
+
+/* .loader {
+
+  --circle-size: 3.5rem; 
+  --gap: 18px;          
+
+
+  --step: calc(var(--circle-size) + var(--gap));
+  width: calc(var(--step) * 3);
+  height: calc(var(--circle-size) + 50px); 
+  
+  position: relative;
+  z-index: 10000;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.2em;
+  font-weight: bold;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+
+
+  --_g: no-repeat radial-gradient(farthest-side, #ffffff 94%, #0000); 
+  background:
+    var(--_g) var(--step) 0,
+    var(--_g) calc(var(--step) * 2) 0;
+  background-size: var(--circle-size) var(--circle-size);
+  animation: l23-0 1.5s linear infinite;
+}
+
+.preloaderHidden .loader {
+  opacity: 0;
+}
+
+.loader:before {
+  content: "";
+  position: absolute;
+  height: var(--circle-size);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #d51919;
+  left: 0;
+  top: 0;
+  animation: 
+    l23-1 1.5s linear infinite,
+    l23-2 0.5s cubic-bezier(0, 200, .8, 200) infinite;
+}
+
+@keyframes l23-0 {
+  0%, 31%  { background-position: var(--step) 0, calc(var(--step) * 2) 0; }
+  33%      { background-position: var(--step) 100%, calc(var(--step) * 2) 0; }
+  43%, 64% { background-position: var(--step) 0, calc(var(--step) * 2) 0; }
+  66%      { background-position: var(--step) 0, calc(var(--step) * 2) 100%; }
+  79%      { background-position: var(--step) 0, calc(var(--step) * 2) 0; }
+  100%     { transform: translateX(calc(-1 * var(--step))); }
+}
+
+
+@keyframes l23-1 {
+  100% { left: calc(var(--step) * 3); }
+}
+
+@keyframes l23-2 {
+  100% { top: -0.1px; }
+} */
+
+
+/* -----------terceira animação---------------*/
+
+/* .loader {
+  --base-size: 90px;     
+  --expanded-size: 140px;  
+  --bg-square-size: 48px; 
+  --loader-color: #90BDE4;
+
+ 
+  position: relative;
+  z-index: 10000;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+
+
+  width: var(--base-size);
+  height: var(--base-size);
+  --c: no-repeat linear-gradient(var(--loader-color) 0 0);
+  background: var(--c), var(--c), var(--c), var(--c);
+  background-size: var(--bg-square-size) var(--bg-square-size);
+  animation: l5 1.5s infinite cubic-bezier(0.3, 1, 0, 1);
+}
+
+
+.preloaderHidden .loader {
+  opacity: 0;
+}
+
+@keyframes l5 {
+  0%   { background-position: 0 0, 100% 0, 100% 100%, 0 100%; }
+  33%  { background-position: 0 0, 100% 0, 100% 100%, 0 100%; width: var(--expanded-size); height: var(--expanded-size); }
+  66%  { background-position: 100% 0, 100% 100%, 0 100%, 0 0;   width: var(--expanded-size); height: var(--expanded-size); }
+  100% { background-position: 100% 0, 100% 100%, 0 100%, 0 0;   }
+} */
+
+/* -----------------4 animação --------------------*/
+
+.loader {
+  /* 👇 VALORES DE TAMANHO 👇 */
+  --base-size: 90px;      /* Tamanho do logo todo junto */
+  --expanded-size: 140px; /* O quanto os pedaços se afastam */
+  
+  /* O CSS calcula automaticamente para cortar a imagem exatamente no meio */
+  --quadrant-size: calc(var(--base-size) / 2);
+
+  width: var(--base-size);
+  height: var(--base-size);
+  position: relative;
+  z-index: 10000;
+  transition: opacity 0.3s ease;
+  
+  /* A animação precisa ter 6 segundos agora, pois criamos 4 estágios contínuos para um giro perfeito de 360 graus */
+  animation: logo-expand-rotate 5s infinite cubic-bezier(0.3, 1, 0, 1);
+}
+
+.preloaderHidden .loader {
+  opacity: 0;
+}
+
+/* para usa nos anteriores 3 animação */
+/* Criando os 4 quadradinhos que vão receber a imagem */
+/* .loader span {
+  position: absolute;
+  width: var(--quadrant-size);
+  height: var(--quadrant-size);
+  background-image: var(--logo-url);
+  background-size: var(--base-size) var(--base-size);
+  background-repeat: no-repeat;
+} */
+
+/* Criando os 4 quadradinhos que vão receber a imagem */
+.loader span {
+  position: absolute;
+  width: var(--quadrant-size);
+  height: var(--quadrant-size);
+  
+  /* background-image: agora é inserido pelo React de forma super segura! */
+  background-size: var(--base-size) var(--base-size);
+  background-repeat: no-repeat;
+}
+
+/* Posicionando cada pedaço no seu respectivo canto e cortando a imagem */
+.loader span:nth-child(1) { top: 0; left: 0; background-position: top left; }
+.loader span:nth-child(2) { top: 0; right: 0; background-position: top right; }
+.loader span:nth-child(3) { bottom: 0; right: 0; background-position: bottom right; }
+.loader span:nth-child(4) { bottom: 0; left: 0; background-position: bottom left; }
+
+/* Animação que afasta os pedaços e gira o logo sem quebrar o desenho */
+@keyframes logo-expand-rotate {
+  0%      { width: var(--base-size); height: var(--base-size); transform: rotate(0deg); }
+  8.33%   { width: var(--expanded-size); height: var(--expanded-size); transform: rotate(0deg); }
+  16.66%  { width: var(--expanded-size); height: var(--expanded-size); transform: rotate(90deg); }
+  25%     { width: var(--base-size); height: var(--base-size); transform: rotate(90deg); }
+
+  25.01%  { width: var(--base-size); height: var(--base-size); transform: rotate(90deg); }
+  33.33%  { width: var(--expanded-size); height: var(--expanded-size); transform: rotate(90deg); }
+  41.66%  { width: var(--expanded-size); height: var(--expanded-size); transform: rotate(180deg); }
+  50%     { width: var(--base-size); height: var(--base-size); transform: rotate(180deg); }
+
+  50.01%  { width: var(--base-size); height: var(--base-size); transform: rotate(180deg); }
+  58.33%  { width: var(--expanded-size); height: var(--expanded-size); transform: rotate(180deg); }
+  66.66%  { width: var(--expanded-size); height: var(--expanded-size); transform: rotate(270deg); }
+  75%     { width: var(--base-size); height: var(--base-size); transform: rotate(270deg); }
+
+  75.01%  { width: var(--base-size); height: var(--base-size); transform: rotate(270deg); }
+  83.33%  { width: var(--expanded-size); height: var(--expanded-size); transform: rotate(270deg); }
+  91.66%  { width: var(--expanded-size); height: var(--expanded-size); transform: rotate(360deg); }
+  100%    { width: var(--base-size); height: var(--base-size); transform: rotate(360deg); }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .preloader {
   position: fixed;
   inset: 0;

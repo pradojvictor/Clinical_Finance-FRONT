@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import Navbar from '../components/Navbar'
 import childrenGif from '../assets/children.gif'
+import logoLoader from '../assets/logoloading.svg'
 import styles from './Home.module.css'
 
 export default function Home() {
   const [tone, setTone] = useState<'light' | 'dark'>('light')
   const [isLoading, setIsLoading] = useState(true)
-  
+
   // 👇 Adicionamos este estado para controlar os blocos do scroll
   const [isSectionVisible, setIsSectionVisible] = useState(false)
 
@@ -23,14 +24,14 @@ export default function Home() {
 
     const container = document.querySelector('main')
     const secoes = container ? Array.from(container.querySelectorAll<HTMLElement>('[data-tone]')) : []
-    
+
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
           if (e.isIntersecting) {
             const t = (e.target as HTMLElement).dataset.tone
             if (t === 'light' || t === 'dark') setTone(t)
-            
+
             // Ativa os blocos quando a tela 2 (dark) entra
             if (t === 'dark') setIsSectionVisible(true)
           } else {
@@ -55,8 +56,18 @@ export default function Home() {
 
   return (
     <>
-      <div className={`${styles.preloader} ${!isLoading ? styles.preloaderHidden : ''}`}>
+      {/* <div className={`${styles.preloader} ${!isLoading ? styles.preloaderHidden : ''}`}>
         <div className={styles.preloaderText}>{isLoading ? 'INICIANDO...' : ''}</div>
+        <div className={styles.loader}>{isLoading ? '' : ''}</div>
+        <div
+          className={styles.loader}
+          style={{ '--logo-url': `url(${logoLoader})` } as React.CSSProperties}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
         <div className={styles.preloaderBlocks}>
           <div className={styles.pBlock}></div>
           <div className={styles.pBlock}></div>
@@ -64,7 +75,33 @@ export default function Home() {
           <div className={styles.pBlock}></div>
           <div className={styles.pBlock}></div>
         </div>
+      </div> */}
+
+<div className={`${styles.preloader} ${!isLoading ? styles.preloaderHidden : ''}`}>
+        
+        {/* 👇 1. BLOCOS PRIMEIRO: Ficam no fundo da tela */}
+        <div className={styles.preloaderBlocks}>
+          <div className={styles.pBlock}></div>
+          <div className={styles.pBlock}></div>
+          <div className={styles.pBlock}></div>
+          <div className={styles.pBlock}></div>
+          <div className={styles.pBlock}></div>
+        </div>
+
+        {/* 👇 2. LOADER DEPOIS: Fica por cima dos blocos garantindo visibilidade */}
+        <div className={styles.loader}>
+          {/* Usamos a checagem 'logoLoader.src' caso você esteja no Next.js, ou só 'logoLoader' no Vite */}
+          <span style={{ backgroundImage: `url("${typeof logoLoader === 'string' ? logoLoader : (logoLoader as any).src}")` }}></span>
+          <span style={{ backgroundImage: `url("${typeof logoLoader === 'string' ? logoLoader : (logoLoader as any).src}")` }}></span>
+          <span style={{ backgroundImage: `url("${typeof logoLoader === 'string' ? logoLoader : (logoLoader as any).src}")` }}></span>
+          <span style={{ backgroundImage: `url("${typeof logoLoader === 'string' ? logoLoader : (logoLoader as any).src}")` }}></span>
+        </div>
+
       </div>
+
+
+
+      
 
       <div className={`${styles.navWrapper} ${!isLoading ? styles.loadedNav : ''}`}>
         <Navbar landing tone={tone} />
@@ -97,11 +134,11 @@ export default function Home() {
             <div className={styles.step}></div>
             <div className={styles.step}></div>
           </div>
-          
+
           <div className={styles.proximaInner}>
             <span className={styles.proximaTag}>clinleste</span>
             <h2 className={styles.proximaTitulo}>
-              Saúde mental além dos medicamentos. Tratamentos com abordagem terapêutica em Neuromodulação. 
+              Saúde mental além dos medicamentos. Tratamentos com abordagem terapêutica em Neuromodulação.
             </h2>
             <p className={styles.proximaTexto}></p>
           </div>
