@@ -8,9 +8,16 @@ import styles from './Navbar.module.css'
 
 const primeiroNome = (nome: string) => nome.trim().split(/\s+/)[0] ?? nome
 
+interface NavbarProps {
+  /** Modo landing: header fixo e transparente, cor adaptável (branco/marinho). */
+  landing?: boolean
+  /** No modo landing: 'light' = conteúdo branco (sobre fundo escuro); 'dark' = marinho. */
+  tone?: 'light' | 'dark'
+}
+
 /** Navbar do site público. Deslogado: botão Entrar/Cadastrar (abre o modal).
     Logado (cliente ou staff): botão de usuário com menu (Meus dados / Sair). */
-export default function Navbar() {
+export default function Navbar({ landing = false, tone = 'dark' }: NavbarProps) {
   const { user, sair } = useAuth()
   const navigate = useNavigate()
   const [aberto, setAberto] = useState(false) // modal de login
@@ -38,10 +45,17 @@ export default function Navbar() {
   }
 
   return (
-    <header className={styles.nav}>
+    <header
+      className={`${styles.nav} ${landing ? styles.navLanding : ''}`}
+      data-tone={landing ? tone : undefined}
+    >
       <div className={styles.inner}>
         <Link to="/" className={styles.brand} aria-label="Clinleste — página inicial">
-          <img src={logo} alt="Clinleste" className={styles.logo} />
+          {landing ? (
+            <span className={styles.wordmark}>Clinleste</span>
+          ) : (
+            <img src={logo} alt="Clinleste" className={styles.logo} />
+          )}
         </Link>
 
         {user ? (

@@ -19,6 +19,61 @@
   gap: var(--sp-4);
 }
 
+/* ---- Modo landing: fixo, transparente, cor adaptável ------------- */
+.navLanding {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-h);
+  background: transparent;
+  border-bottom: none;
+  backdrop-filter: none;
+  z-index: 30;
+}
+.navLanding[data-tone='light'] {
+  --fg: #ffffff;
+}
+.navLanding[data-tone='dark'] {
+  --fg: #161b52;
+}
+.wordmark {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  transition: color 0.3s ease;
+}
+/* Botões/menu herdam a cor adaptável no landing */
+.navLanding .entrar {
+  background: transparent;
+  border: 0.09375rem solid var(--fg);
+  color: var(--fg);
+  box-shadow: none;
+  transition: color 0.3s ease, border-color 0.3s ease, background 0.15s ease;
+}
+.navLanding .entrar:hover {
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+}
+.navLanding .userBtn {
+  background: transparent;
+  border-color: var(--fg);
+  color: var(--fg);
+  box-shadow: none;
+}
+.navLanding .userBtn:hover {
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+.navLanding .avatar {
+  background: color-mix(in srgb, var(--fg) 18%, transparent);
+  color: var(--fg);
+}
+.navLanding .userNome,
+.navLanding .chev,
+.navLanding .chevAberto {
+  color: var(--fg);
+}
+
 .brand {
   display: inline-flex;
   align-items: center;

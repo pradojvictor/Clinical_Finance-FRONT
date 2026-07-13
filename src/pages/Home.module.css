@@ -1,9 +1,145 @@
-/* Home pública — vazia por enquanto, com um fundo suave da marca. */
+/* =====================================================================
+   Landing — seções de tela cheia com rolagem por telas (scroll-snap).
+   Paleta do site: azul #90BDE4 · marinho #161B52 · cinza #C1C1C1 · branco.
+   O <main> é o container de rolagem; o header fica fixo por cima.
+   ===================================================================== */
+/* O documento (html) é o container de rolagem; ver Home.tsx (efeito).
+   As seções empilham em telas cheias. */
 .main {
-  min-height: calc(100vh - var(--nav-h));
-  min-height: calc(100dvh - var(--nav-h));
+  background: #161b52;
+}
+
+/* ---- Tela 1: hero ------------------------------------------------- */
+.hero {
+  position: relative;
+  height: 100dvh;
+  min-height: 100dvh;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #161b52;
+}
+.heroGif {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+/* Escurece topo e base para legibilidade do header e do texto. */
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   background:
-    radial-gradient(45rem 30rem at 12% -12%, #e2ecf7 0%, transparent 60%),
-    radial-gradient(40rem 30rem at 112% 8%, #eaf1f8 0%, transparent 55%),
-    var(--bg);
+    linear-gradient(180deg, rgba(22, 27, 82, 0.55) 0%, rgba(22, 27, 82, 0) 22%),
+    linear-gradient(0deg, rgba(22, 27, 82, 0.65) 0%, rgba(22, 27, 82, 0) 34%),
+    rgba(22, 27, 82, 0.22);
+}
+.heroContent {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 0 var(--sp-6);
+  color: #ffffff;
+}
+.heroTitle {
+  font-size: clamp(3.5rem, 14vw, 11rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+  color: #ffffff;
+  text-shadow: 0 0.25rem 2.5rem rgba(0, 0, 0, 0.35);
+}
+.heroSub {
+  margin-top: var(--sp-4);
+  font-size: clamp(1rem, 2.2vw, 1.375rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Indicador de rolagem */
+.scrollCue {
+  position: absolute;
+  bottom: clamp(1.5rem, 4vh, 2.75rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.85);
+}
+.scrollArrow {
+  width: 1.5rem;
+  height: 2.375rem;
+  border: 0.125rem solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-pill);
+  position: relative;
+}
+.scrollArrow::before {
+  content: '';
+  position: absolute;
+  top: 0.4375rem;
+  left: 50%;
+  width: 0.25rem;
+  height: 0.5rem;
+  margin-left: -0.125rem;
+  border-radius: var(--radius-pill);
+  background: #ffffff;
+  animation: rolar 1.6s ease-in-out infinite;
+}
+@keyframes rolar {
+  0% { opacity: 0; transform: translateY(0); }
+  40% { opacity: 1; }
+  80% { opacity: 0; transform: translateY(0.75rem); }
+  100% { opacity: 0; }
+}
+
+/* ---- Tela 2: placeholder (próxima etapa) ------------------------- */
+.proxima {
+  height: 100dvh;
+  min-height: 100dvh;
+  scroll-snap-align: start;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-8) var(--sp-6);
+  background: #ffffff;
+}
+.proximaInner {
+  max-width: 40rem;
+  text-align: center;
+}
+.proximaTag {
+  display: inline-block;
+  padding: 0.3125rem 0.875rem;
+  border-radius: var(--radius-pill);
+  background: rgba(144, 189, 228, 0.22);
+  color: #161b52;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.proximaTitulo {
+  margin-top: var(--sp-5);
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 700;
+  color: #161b52;
+  letter-spacing: -0.01em;
+}
+.proximaTexto {
+  margin-top: var(--sp-4);
+  font-size: var(--fs-lg);
+  color: #667085;
+  line-height: 1.6;
 }
