@@ -1,15 +1,89 @@
 /* =====================================================================
    Landing — seções de tela cheia com rolagem por telas (scroll-snap).
    Paleta do site: azul #90BDE4 · marinho #161B52 · cinza #C1C1C1 · branco.
-   O <main> é o container de rolagem; o header fica fixo por cima.
    ===================================================================== */
-/* O documento (html) é o container de rolagem; ver Home.tsx (efeito).
-   As seções empilham em telas cheias. */
-.main {
-  background: #161b52;
+/* ===================================================================== */
+/* 👇 1. PRELOADER E BLOCOS QUE SOBEM 👇 */
+/* ===================================================================== */
+.preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
 }
 
-/* ---- Tela 1: hero ------------------------------------------------- */
+.preloaderText {
+  position: relative;
+  z-index: 10000;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.2em;
+  font-weight: bold;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+/* Oculta o texto quando termina de carregar */
+.preloaderHidden .preloaderText {
+  opacity: 0;
+}
+
+.preloaderBlocks {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.pBlock {
+  width: 20%;
+  background: rgba(255, 255, 255, 0.15); /* Fundo branco semitransparente */
+  backdrop-filter: blur(10px); /* Aplica o desfoque ao fundo */
+  -webkit-backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  transform-origin: top; /* EFEITO CORTINA: encolhe em direção ao topo */
+  transform: scaleY(1);
+  transition: transform 1s cubic-bezier(0.85, 0, 0.15, 1);
+}
+
+/* Animação dos blocos subindo em cascata */
+.preloaderHidden .pBlock {
+  transform: scaleY(0);
+}
+.preloaderHidden .pBlock:nth-child(1) { transition-delay: 0.0s; }
+.preloaderHidden .pBlock:nth-child(2) { transition-delay: 0.1s; }
+.preloaderHidden .pBlock:nth-child(3) { transition-delay: 0.05s; } /* Quebra o ritmo perfeito para ficar orgânico */
+.preloaderHidden .pBlock:nth-child(4) { transition-delay: 0.2s; }
+.preloaderHidden .pBlock:nth-child(5) { transition-delay: 0.15s; }
+
+/* ===================================================================== */
+/* 👇 2. ANIMAÇÃO DE ENTRADA DO MENU 👇 */
+/* ===================================================================== */
+.navWrapper {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 1s ease, transform 1s ease;
+}
+.loadedNav {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 1.2s; /* Entra depois dos blocos */
+}
+
+
+/* ===================================================================== */
+/* O RESTO DO SEU SITE (TELA 1 E TELA 2) */
+/* ===================================================================== */
+.main {
+  background: #ffffff;
+}
+
 .hero {
   position: relative;
   height: 100dvh;
@@ -30,7 +104,6 @@
   object-fit: cover;
   z-index: 0;
 }
-/* Escurece topo e base para legibilidade do header e do texto. */
 .heroScrim {
   position: absolute;
   inset: 0;
@@ -41,59 +114,76 @@
     rgba(22, 27, 82, 0.22);
 }
 .heroContent {
-/* 1. Faz o container ocupar 100% da largura da tela */
   width: 100%; 
-  /* 2. Empurra todo o texto para o canto esquerdo */
   text-align: left; 
   padding: 0 var(--sp-6);
 }
+
+/* 👇 3. ANIMAÇÃO DO TÍTULO SEM QUEBRAR O BLEND-MODE 👇 */
 .heroTitle {
-  /* Mantemos o z-index para furar a camada escura */
+  /* DEFINA A POSIÇÃO AQUI: quanto maior o valor, mais para baixo o título fica */
+  --ajuste-vertical: 45vh; 
+  
   position: relative;
   z-index: 2;
-  
-  /* --- ESTILO GIGANTE DA IMAGEM --- */
   font-size: clamp(5rem, 10vw, 15rem); 
   font-weight: 900;
   text-transform: uppercase;
-  
   line-height: 0.85; 
   letter-spacing: -0.04em; 
-  margin: 0; /* Clear existing margin first */
-  
-  /* A mágica da inversão */
   color: #ffffff; 
   mix-blend-mode: difference;
+  margin-bottom: 0rem; 
 
-  /* ===================================================================== */
-  /* 👇 O NOVO E CORRETO CONTROLE DE POSIÇÃO 👇 */
-  /* Adicionamos o controle aqui para mover TUDO (título e subtítulo).
-     Usamos margin-top, que é compatível com blend-mode.
-     - Positivo (ex: 50px, 8vh) empurra para BAIXO.
-     - Negativo (ex: -50px, -8vh) puxa para CIMA. */
-  --ajuste-vertical: 30vh; 
-  margin-top: var(--ajuste-vertical); /* Usa margin, NÃO transform */
-  /* Adicionamos uma margem inferior para o subtítulo não colar no título */
-  margin-bottom: 1.5rem; 
-  /* ===================================================================== */
+  /* O ESTADO INICIAL (escondido e um pouco mais baixo que o destino) */
+  margin-top: calc(var(--ajuste-vertical) + 50px); 
+  opacity: 0;
+  
+  /* A ANIMAÇÃO */
+  transition: opacity 1.2s ease-out, margin-top 1.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
+/* Estilo para cada letra individual */
+/* Estilo para cada letra individual (Mantém o efeito stagger) */
+.heroTitle span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.isLoaded .heroTitle span {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* O ESTADO FINAL (quando a classe .isLoaded for injetada pelo React) */
+.isLoaded .heroTitle {
+  opacity: 1;
+  margin-top: var(--ajuste-vertical);
+}
+
+/* Animação do Subtítulo */
 .heroSub {
-  /* Garante que o subtítulo também fique sobreposto e visível */
   position: relative;
   z-index: 2;
-  
-  /* Removemos a margin-top daqui, pois o título já tem margin-bottom */
   margin-top: 0; 
-  
+  margin-left: 1rem;
   font-size: clamp(1.125rem, 2vw, 1.5rem);
   font-weight: 400;
   letter-spacing: 0.02em;
   color: rgba(255, 255, 255, 0.9);
-  
   max-width: 600px;
+
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 1s ease-out, transform 1s ease-out;
+}
+.isLoaded .heroSub {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 1.1s;
 }
 
-/* Indicador de rolagem */
 .scrollCue {
   position: absolute;
   bottom: clamp(1.5rem, 4vh, 2.75rem);
@@ -108,6 +198,13 @@
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: rgba(255, 255, 255, 0.85);
+
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+.loadedScroll {
+  opacity: 1;
+  transition-delay: 1.8s;
 }
 .scrollArrow {
   width: 1.5rem;
@@ -135,8 +232,49 @@
   100% { opacity: 0; }
 }
 
-/* ---- Tela 2: placeholder (próxima etapa) ------------------------- */
+/* ===================================================================== */
+/* 👇 4. A ESCADA (CORRIGIDA PARA AS ALTURAS DO VÍDEO) 👇 */
+/* ===================================================================== */
+.staircase {
+position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%; /* Ocupa a seção inteira */
+  display: flex;
+  pointer-events: none;
+  z-index: 5;
+}
+.showStairs {
+  transform: translateY(0);
+  opacity: 1;
+}
+.step {
+  flex: 1;
+  background: #ffffff;
+  /* Estado inicial: blocos cobrindo a seção */
+  transform: translateY(0);
+  transition: transform 1s cubic-bezier(0.85, 0, 0.15, 1);
+  
+  /* 👇 A SOLUÇÃO PARA A LINHA: sobrepõe 1px para evitar vãos de sub-pixel 👇 */
+  margin-right: -1px;
+}
+
+/* Quando a seção está visível, os blocos sobem */
+.showStairs .step {
+  transform: translateY(-100%);
+}
+
+/* O "stagger" (atraso) que cria o efeito de onda */
+.showStairs .step:nth-child(1) { transition-delay: 0.0s; }
+.showStairs .step:nth-child(2) { transition-delay: 0.1s; }
+.showStairs .step:nth-child(3) { transition-delay: 0.2s; }
+.showStairs .step:nth-child(4) { transition-delay: 0.3s; }
+.showStairs .step:nth-child(5) { transition-delay: 0.4s; }
+
 .proxima {
+  position: relative; 
+  z-index: 20;
   height: 100dvh;
   min-height: 100dvh;
   scroll-snap-align: start;
