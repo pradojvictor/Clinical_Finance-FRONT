@@ -12,9 +12,14 @@ export default function Sidebar() {
   const railRef = useRef<HTMLDivElement>(null)
 
   // Só mostra as páginas permitidas ao perfil do usuário (cliente não usa o trilho).
-  const itens = NAV_ITEMS.filter(
-    (item) => user !== null && user.perfil !== 'cliente' && item.roles.includes(user.perfil),
-  )
+  // Profissional: só leitura; Início sempre + as seções liberadas pelo gestor.
+  const itens = NAV_ITEMS.filter((item) => {
+    if (user === null || user.perfil === 'cliente') return false
+    if (user.perfil === 'profissional') {
+      return item.to === '/sistema' || (item.secao != null && (user.permissoes ?? []).includes(item.secao))
+    }
+    return item.roles.includes(user.perfil)
+  })
 
   // Clicar fora do trilho recolhe o menu.
   useEffect(() => {

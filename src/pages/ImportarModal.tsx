@@ -6,9 +6,12 @@ import {
   bancosApi,
   entradasApi,
   pacientesApi,
+  tiposEntradaApi,
+  subtiposEntradaApi,
   type Banco,
   type Forma,
   type NovaEntrada,
+  type SubtipoEntrada,
   type VerificacaoImport,
 } from '../lib/api'
 import i from './ImportarModal.module.css'
@@ -39,6 +42,7 @@ interface Linha {
   valor_centavos: number
   forma: Forma | ''
   banco_id: string
+  subtipo_id: string
   status: 'cadastrado' | 'novo'
   duplicada: boolean
 }
@@ -74,12 +78,28 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
   const [resultado, setResultado] = useState<{ criadas: number; pacientes_novos: number } | null>(null)
   const [bulkForma, setBulkForma] = useState<Forma | ''>('')
   const [bulkBanco, setBulkBanco] = useState('')
+  const [tipoConsultaId, setTipoConsultaId] = useState<number | null>(null)
+  const [subtipos, setSubtipos] = useState<SubtipoEntrada[]>([])
+  const [bulkSubtipo, setBulkSubtipo] = useState('')
   const [verif, setVerif] = useState<VerificacaoImport | null>(null)
   const [arquivo, setArquivo] = useState<{ nome: string; hash: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     bancosApi.listar().then((r) => setBancos(r.bancos.filter((b) => b.ativo))).catch(() => {})
+    // Importação = Consulta: acha o tipo "Consulta" e carrega seus profissionais.
+    tiposEntradaApi
+      .listar()
+      .then((r) => {
+        const consulta = r.tipos.find((t) => t.ativo && t.nome.toLowerCase().includes('consulta'))
+        if (!consulta) return
+        setTipoConsultaId(consulta.id)
+        subtiposEntradaApi
+          .listar(consulta.id)
+          .then((s) => setSubtipos(s.subtipos.filter((x) => x.ativo)))
+          .catch(() => {})
+      })
+      .catch(() => {})
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = ''
@@ -120,7 +140,7 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
             } catch {
               /* ignore */
             }
-            return { ...b, forma: '' as const, banco_id: '', status, duplicada: false }
+            return { ...b, forma: '' as const, banco_id: '', subtipo_id: '', status, duplicada: false }
           }),
         ),
         entradasApi
@@ -148,7 +168,14 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
 
   const aplicarTodas = () =>
     setLinhas((ls) =>
-      ls ? ls.map((l) => ({ ...l, forma: bulkForma || l.forma, banco_id: bulkBanco || l.banco_id })) : ls,
+      ls
+        ? ls.map((l) => ({
+            ...l,
+            forma: bulkForma || l.forma,
+            banco_id: bulkBanco || l.banco_id,
+            subtipo_id: bulkSubtipo || l.subtipo_id,
+          }))
+        : ls,
     )
 
   const qtdDuplicadas = linhas?.filter((l) => l.duplicada).length ?? 0
@@ -163,6 +190,8 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
       valor_centavos: l.valor_centavos,
       data: l.data || undefined,
       banco_id: l.banco_id ? Number(l.banco_id) : null,
+      tipo_id: tipoConsultaId ?? null,
+      subtipo_id: l.subtipo_id ? Number(l.subtipo_id) : null,
       paciente: { nome: l.nome },
     }))
     setEnviando(true)
@@ -248,14 +277,33 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
                   <option value="">Banco…</option>
                   {bancos.map((b) => <option key={b.id} value={b.id}>{b.nome}</option>)}
                 </select>
+                {tipoConsultaId != null && (
+                  <select className={i.selectSm} value={bulkSubtipo} onChange={(e) => setBulkSubtipo(e.target.value)}>
+                    <option value="">Profissional…</option>
+                    {subtipos.map((sub) => (
+                      <option key={sub.id} value={sub.id}>{sub.rotulo}</option>
+                    ))}
+                  </select>
+                )}
                 <button type="button" className={i.btnGhost} onClick={aplicarTodas}>Aplicar</button>
               </div>
+
+              {tipoConsultaId != null ? (
+                <p className={i.dica}>
+                  Todas serão registradas como <strong>Consulta</strong>. O profissional pode ser ajustado por linha.
+                </p>
+              ) : (
+                <div className={i.alerta}>
+                  Nenhum tipo <strong>“Consulta”</strong> cadastrado — as entradas serão importadas sem tipo.
+                </div>
+              )}
 
               <div className={i.tableWrap}>
                 <table className={i.table}>
                   <thead>
                     <tr>
                       <th>Paciente</th><th>Data</th><th className={i.num}>Valor</th><th>Forma</th><th>Banco</th>
+                      {tipoConsultaId != null && <th>Profissional</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -282,6 +330,16 @@ export default function ImportarModal({ onClose, onSalvo }: { onClose: () => voi
                             {bancos.map((b) => <option key={b.id} value={b.id}>{b.nome}</option>)}
                           </select>
                         </td>
+                        {tipoConsultaId != null && (
+                          <td>
+                            <select className={i.selectCel} value={l.subtipo_id} onChange={(e) => setLinha(idx, { subtipo_id: e.target.value })}>
+                              <option value="">—</option>
+                              {subtipos.map((sub) => (
+                                <option key={sub.id} value={sub.id}>{sub.rotulo}</option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

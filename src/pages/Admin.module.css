@@ -317,6 +317,16 @@
   margin: var(--sp-2) 0 var(--sp-1);
   padding-left: var(--sp-5);
 }
+/* Form de "nova categoria" — no nível da central (sem o recuo de subcategoria),
+   separado por uma linha pra deixar claro que adiciona uma categoria. */
+.addCatForm {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 0.0625rem dashed var(--border-strong);
+}
 .addInput {
   flex: 1;
   max-width: 20rem;

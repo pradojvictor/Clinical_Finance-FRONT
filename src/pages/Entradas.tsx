@@ -11,13 +11,18 @@ import {
   entradasApi,
   pacientesApi,
   taxasApi,
+  tiposEntradaApi,
+  subtiposEntradaApi,
   type Banco,
   type EditarEntrada,
   type EntradaDetalhe,
   type Forma,
   type NovaEntrada,
   type Paciente,
+  type TipoEntrada,
+  type SubtipoEntrada,
 } from '../lib/api'
+import { useAuth } from '../lib/auth'
 import s from './page.module.css'
 import e from './Entradas.module.css'
 
@@ -47,7 +52,7 @@ function parseCentavos(str: string): number {
   return Number.isFinite(n) ? Math.round(n * 100) : 0
 }
 
-const COLUNAS = ['Data', 'Paciente', 'Forma', 'Banco', 'Valor', 'Líquido', '']
+const COLUNAS = ['Data', 'Paciente', 'Tipo', 'Forma', 'Banco', 'Valor', 'Líquido', '']
 
 const ImportarModal = lazy(() => import('./ImportarModal'))
 
@@ -61,6 +66,8 @@ export default function Entradas() {
   const [modal, setModal] = useState(false)
   const [importar, setImportar] = useState(false)
   const [editando, setEditando] = useState<EntradaDetalhe | null>(null)
+  const { user } = useAuth()
+  const soLeitura = user?.perfil === 'profissional'
 
   const carregar = useCallback(() => {
     const { de, ate } = periodoMes(ano, mes)
@@ -78,7 +85,7 @@ export default function Entradas() {
   const q = busca.trim().toLowerCase()
   const filtradas = (entradas ?? []).filter((en) => {
     if (!q) return true
-    return `${en.paciente_nome ?? ''} ${FORMA_LABEL[en.forma]} ${en.banco_nome ?? ''}`.toLowerCase().includes(q)
+    return `${en.paciente_nome ?? ''} ${en.tipo_nome ?? ''} ${en.subtipo_nome ?? ''} ${FORMA_LABEL[en.forma]} ${en.banco_nome ?? ''}`.toLowerCase().includes(q)
   })
 
   return (
@@ -94,12 +101,16 @@ export default function Entradas() {
             onChange={(ev) => setBusca(ev.target.value)}
           />
         </div>
-        <button type="button" className={s.btn} onClick={() => setImportar(true)}>
-          <Icon name="proc" size={18} /> Importar planilha
-        </button>
-        <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={() => setModal(true)}>
-          <Icon name="entrada" size={18} /> Nova entrada
-        </button>
+        {!soLeitura && (
+          <>
+            <button type="button" className={s.btn} onClick={() => setImportar(true)}>
+              <Icon name="proc" size={18} /> Importar planilha
+            </button>
+            <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={() => setModal(true)}>
+              <Icon name="entrada" size={18} /> Nova entrada
+            </button>
+          </>
+        )}
       </div>
 
       <Card
@@ -133,12 +144,24 @@ export default function Entradas() {
                   <tr key={en.id}>
                     <td>{dataBR(en.data)}</td>
                     <td>{en.paciente_nome ?? <span className={e.vazio}>—</span>}</td>
+                    <td>
+                      {en.tipo_nome ? (
+                        <>
+                          {en.tipo_nome}
+                          {en.subtipo_nome && <span className={e.dropCpf}> · {en.subtipo_nome}</span>}
+                        </>
+                      ) : (
+                        <span className={e.vazio}>—</span>
+                      )}
+                    </td>
                     <td>{FORMA_LABEL[en.forma]}</td>
                     <td>{en.banco_nome ?? <span className={e.vazio}>—</span>}</td>
                     <td className={s.num}>{brl(en.valor_centavos)}</td>
                     <td className={s.num}>{brl(en.valor_liquido_centavos)}</td>
                     <td className={s.num}>
-                      <button type="button" className={e.acaoLink} onClick={() => setEditando(en)}>Editar</button>
+                      {!soLeitura && (
+                        <button type="button" className={e.acaoLink} onClick={() => setEditando(en)}>Editar</button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -197,15 +220,20 @@ function NovaEntradaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: 
   const [valor, setValor] = useState('')
   const [forma, setForma] = useState<Forma | ''>('')
   const [bancoId, setBancoId] = useState('')
+  const [tipoId, setTipoId] = useState('')
+  const [subtipoId, setSubtipoId] = useState('')
   const [observacao, setObservacao] = useState('')
 
   const [bancos, setBancos] = useState<Banco[]>([])
+  const [tipos, setTipos] = useState<TipoEntrada[]>([])
+  const [subtipos, setSubtipos] = useState<SubtipoEntrada[]>([])
   const [taxaBp, setTaxaBp] = useState<number | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
   useEffect(() => {
     bancosApi.listar().then((r) => setBancos(r.bancos.filter((b) => b.ativo))).catch(() => {})
+    tiposEntradaApi.listar().then((r) => setTipos(r.tipos.filter((t) => t.ativo))).catch(() => {})
     const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose()
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
@@ -244,6 +272,19 @@ function NovaEntradaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: 
       .catch(() => setTaxaBp(null))
   }, [forma, bancoId])
 
+  // subtipos (subcategorias) do tipo escolhido
+  useEffect(() => {
+    setSubtipoId('')
+    if (!tipoId) {
+      setSubtipos([])
+      return
+    }
+    subtiposEntradaApi
+      .listar(Number(tipoId))
+      .then((r) => setSubtipos(r.subtipos.filter((x) => x.ativo)))
+      .catch(() => setSubtipos([]))
+  }, [tipoId])
+
   const selecionar = (p: Paciente) => {
     setPacienteId(p.id)
     setNome(p.nome)
@@ -255,9 +296,14 @@ function NovaEntradaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: 
   const centavos = parseCentavos(valor)
   const liquido = taxaBp != null ? centavos - Math.round((centavos * taxaBp) / 10000) : centavos
 
+  // Paciente só é pedido quando o tipo escolhido é "Consulta".
+  const tipoSelecionado = tipos.find((t) => String(t.id) === tipoId)
+  const ehConsulta = (tipoSelecionado?.nome ?? '').toLowerCase().includes('consulta')
+
   const onSubmit = async (ev: FormEvent) => {
     ev.preventDefault()
     setErro(null)
+    if (!tipoId) return setErro('Escolha o tipo de entrada.')
     if (!forma) return setErro('Escolha a forma de pagamento.')
     if (centavos <= 0) return setErro('Informe um valor válido.')
 
@@ -265,15 +311,19 @@ function NovaEntradaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: 
       forma,
       valor_centavos: centavos,
       banco_id: bancoId ? Number(bancoId) : null,
+      tipo_id: Number(tipoId),
+      subtipo_id: subtipoId ? Number(subtipoId) : null,
       observacao: observacao.trim() || undefined,
     }
-    if (pacienteId !== null) dados.paciente_id = pacienteId
-    else if (nome.trim())
-      dados.paciente = {
-        nome: nome.trim(),
-        cpf: cpf.replace(/\D/g, '') || undefined,
-        email: email.trim() || undefined,
-      }
+    if (ehConsulta) {
+      if (pacienteId !== null) dados.paciente_id = pacienteId
+      else if (nome.trim())
+        dados.paciente = {
+          nome: nome.trim(),
+          cpf: cpf.replace(/\D/g, '') || undefined,
+          email: email.trim() || undefined,
+        }
+    }
 
     setEnviando(true)
     try {
@@ -296,39 +346,65 @@ function NovaEntradaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: 
         <form className={e.form} onSubmit={onSubmit} noValidate>
           {erro && <div className={e.erro}>{erro}</div>}
 
-          {/* Paciente */}
-          <div className={e.grupo}>
-            <span className={e.grupoTit}>Paciente</span>
-            <div className={e.autoWrap}>
-              <input
-                className={e.input}
-                value={nome}
-                onChange={(ev) => {
-                  setNome(ev.target.value)
-                  if (pacienteId !== null) setPacienteId(null)
-                }}
-                placeholder="Nome do paciente"
-                autoComplete="off"
-              />
-              {pacienteId !== null && <span className={e.chip}>cadastrado</span>}
-              {pacienteId === null && resultados.length > 0 && (
-                <ul className={e.dropdown}>
-                  {resultados.map((p) => (
-                    <li key={p.id}>
-                      <button type="button" onClick={() => selecionar(p)}>
-                        <strong>{p.nome}</strong>
-                        {p.cpf && <span className={e.dropCpf}> · {formatCpf(p.cpf)}</span>}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+          {/* Tipo de entrada (obrigatório) — no topo */}
+          <label className={e.campo}>
+            <span className={e.label}>Tipo de entrada</span>
+            <select className={e.input} value={tipoId} onChange={(ev) => setTipoId(ev.target.value)}>
+              <option value="">Selecione…</option>
+              {tipos.map((t) => (
+                <option key={t.id} value={t.id}>{t.nome}</option>
+              ))}
+            </select>
+          </label>
+
+          {/* Subcategoria — só quando o tipo escolhido tiver subcategorias */}
+          {subtipos.length > 0 && (
+            <label className={e.campo}>
+              <span className={e.label}>Subcategoria (opcional)</span>
+              <select className={e.input} value={subtipoId} onChange={(ev) => setSubtipoId(ev.target.value)}>
+                <option value="">Sem subcategoria</option>
+                {subtipos.map((sub) => (
+                  <option key={sub.id} value={sub.id}>{sub.rotulo}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {/* Paciente — só aparece quando o tipo é "Consulta" */}
+          {ehConsulta && (
+            <div className={e.grupo}>
+              <span className={e.grupoTit}>Paciente</span>
+              <div className={e.autoWrap}>
+                <input
+                  className={e.input}
+                  value={nome}
+                  onChange={(ev) => {
+                    setNome(ev.target.value)
+                    if (pacienteId !== null) setPacienteId(null)
+                  }}
+                  placeholder="Nome do paciente"
+                  autoComplete="off"
+                />
+                {pacienteId !== null && <span className={e.chip}>cadastrado</span>}
+                {pacienteId === null && resultados.length > 0 && (
+                  <ul className={e.dropdown}>
+                    {resultados.map((p) => (
+                      <li key={p.id}>
+                        <button type="button" onClick={() => selecionar(p)}>
+                          <strong>{p.nome}</strong>
+                          {p.cpf && <span className={e.dropCpf}> · {formatCpf(p.cpf)}</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className={e.linha2}>
+                <input className={e.input} value={cpf} onChange={(ev) => setCpf(ev.target.value)} placeholder="CPF (opcional)" readOnly={pacienteId !== null} inputMode="numeric" />
+                <input className={e.input} value={email} onChange={(ev) => setEmail(ev.target.value)} placeholder="E-mail (opcional)" readOnly={pacienteId !== null} type="email" />
+              </div>
             </div>
-            <div className={e.linha2}>
-              <input className={e.input} value={cpf} onChange={(ev) => setCpf(ev.target.value)} placeholder="CPF (opcional)" readOnly={pacienteId !== null} inputMode="numeric" />
-              <input className={e.input} value={email} onChange={(ev) => setEmail(ev.target.value)} placeholder="E-mail (opcional)" readOnly={pacienteId !== null} type="email" />
-            </div>
-          </div>
+          )}
 
           {/* Valor */}
           <label className={e.campo}>
@@ -406,14 +482,35 @@ function EditarEntradaModal({ entrada, onClose, onSalvo }: { entrada: EntradaDet
   const [valor, setValor] = useState((entrada.valor_centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 }))
   const [forma, setForma] = useState<Forma>(entrada.forma)
   const [bancoId, setBancoId] = useState(entrada.banco_id ? String(entrada.banco_id) : '')
+  const [tipoId, setTipoId] = useState(entrada.tipo_id ? String(entrada.tipo_id) : '')
+  const [subtipoId, setSubtipoId] = useState(entrada.subtipo_id ? String(entrada.subtipo_id) : '')
   const [observacao, setObservacao] = useState(entrada.observacao ?? '')
   const [senha, setSenha] = useState('')
   const [bancos, setBancos] = useState<Banco[]>([])
+  const [tipos, setTipos] = useState<TipoEntrada[]>([])
+  const [subtipos, setSubtipos] = useState<SubtipoEntrada[]>([])
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
+  // subtipos do tipo escolhido; mantém o selecionado se ainda pertencer ao tipo.
+  useEffect(() => {
+    if (!tipoId) {
+      setSubtipos([])
+      setSubtipoId('')
+      return
+    }
+    subtiposEntradaApi
+      .listar(Number(tipoId))
+      .then((r) => {
+        setSubtipos(r.subtipos.filter((x) => x.ativo))
+        setSubtipoId((cur) => (cur && r.subtipos.some((x) => String(x.id) === cur) ? cur : ''))
+      })
+      .catch(() => setSubtipos([]))
+  }, [tipoId])
+
   useEffect(() => {
     bancosApi.listar().then((r) => setBancos(r.bancos.filter((b) => b.ativo))).catch(() => {})
+    tiposEntradaApi.listar().then((r) => setTipos(r.tipos.filter((t) => t.ativo))).catch(() => {})
     const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose()
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
@@ -436,6 +533,8 @@ function EditarEntradaModal({ entrada, onClose, onSalvo }: { entrada: EntradaDet
       forma,
       valor_centavos: centavos,
       banco_id: forma === 'especie' ? null : Number(bancoId),
+      tipo_id: tipoId ? Number(tipoId) : null,
+      subtipo_id: subtipoId ? Number(subtipoId) : null,
       observacao: observacao.trim(),
     }
     setEnviando(true)
@@ -501,6 +600,38 @@ function EditarEntradaModal({ entrada, onClose, onSalvo }: { entrada: EntradaDet
               </select>
             </label>
           </div>
+
+          <label className={e.campo}>
+            <span className={e.label}>Tipo de entrada</span>
+            <select className={e.input} value={tipoId} onChange={(ev) => setTipoId(ev.target.value)}>
+              <option value="">Sem tipo</option>
+              {/* preserva o tipo atual mesmo que tenha sido desativado */}
+              {entrada.tipo_id && !tipos.some((t) => t.id === entrada.tipo_id) && (
+                <option value={entrada.tipo_id}>{entrada.tipo_nome ?? 'Tipo atual'}</option>
+              )}
+              {tipos.map((t) => (
+                <option key={t.id} value={t.id}>{t.nome}</option>
+              ))}
+            </select>
+          </label>
+
+          {(subtipos.length > 0 || subtipoId) && (
+            <label className={e.campo}>
+              <span className={e.label}>Subcategoria</span>
+              <select className={e.input} value={subtipoId} onChange={(ev) => setSubtipoId(ev.target.value)}>
+                <option value="">Sem subcategoria</option>
+                {/* preserva a subcategoria atual mesmo que tenha sido desativada */}
+                {entrada.subtipo_id &&
+                  String(entrada.tipo_id) === tipoId &&
+                  !subtipos.some((x) => x.id === entrada.subtipo_id) && (
+                    <option value={entrada.subtipo_id}>{entrada.subtipo_nome ?? 'Subcategoria atual'}</option>
+                  )}
+                {subtipos.map((sub) => (
+                  <option key={sub.id} value={sub.id}>{sub.rotulo}</option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <label className={e.campo}>
             <span className={e.label}>Observação</span>

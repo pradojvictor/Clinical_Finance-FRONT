@@ -3,6 +3,7 @@ import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Icon from '../components/ui/Icon'
 import { ApiError, clientesApi, type ClienteLista } from '../lib/api'
+import { useAuth } from '../lib/auth'
 import s from './page.module.css'
 import c from './Clientes.module.css'
 
@@ -20,29 +21,33 @@ const msg = (x: unknown) => (x instanceof ApiError ? x.message : 'Ocorreu um err
 type Aba = 'novo' | 'lista'
 
 export default function Clientes() {
+  const { user } = useAuth()
+  const soLeitura = user?.perfil === 'profissional'
   const [aba, setAba] = useState<Aba>('novo')
   return (
     <div className={s.stack}>
       <div className={c.tabs} role="tablist">
+        {!soLeitura && (
+          <button
+            role="tab"
+            aria-selected={aba === 'novo'}
+            className={`${c.tab} ${aba === 'novo' ? c.tabAtiva : ''}`}
+            onClick={() => setAba('novo')}
+          >
+            Cadastrar
+          </button>
+        )}
         <button
           role="tab"
-          aria-selected={aba === 'novo'}
-          className={`${c.tab} ${aba === 'novo' ? c.tabAtiva : ''}`}
-          onClick={() => setAba('novo')}
-        >
-          Cadastrar
-        </button>
-        <button
-          role="tab"
-          aria-selected={aba === 'lista'}
-          className={`${c.tab} ${aba === 'lista' ? c.tabAtiva : ''}`}
+          aria-selected={aba === 'lista' || soLeitura}
+          className={`${c.tab} ${aba === 'lista' || soLeitura ? c.tabAtiva : ''}`}
           onClick={() => setAba('lista')}
         >
           Cadastrados
         </button>
       </div>
 
-      {aba === 'novo' ? <FormCadastro /> : <ListaClientes />}
+      {aba === 'novo' && !soLeitura ? <FormCadastro /> : <ListaClientes />}
     </div>
   )
 }

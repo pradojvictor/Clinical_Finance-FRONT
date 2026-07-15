@@ -13,6 +13,7 @@ import {
   type SaldoLocal,
   type TransferenciaDetalhe,
 } from '../lib/api'
+import { useAuth } from '../lib/auth'
 import { brl, dataBR, hojeISO, parseCentavos } from '../lib/format'
 import s from './page.module.css'
 import e from './Entradas.module.css'
@@ -31,6 +32,8 @@ export default function Transferencias() {
   const [erro, setErro] = useState<string | null>(null)
   const [modal, setModal] = useState(false)
   const [saldoModal, setSaldoModal] = useState(false)
+  const { user } = useAuth()
+  const soLeitura = user?.perfil === 'profissional'
 
   const carregar = () => {
     saldosApi.obter().then((r) => { setSaldos(r.saldos); setTotal(r.total_centavos) }).catch((x) => setErro(msg(x)))
@@ -78,14 +81,16 @@ export default function Transferencias() {
                 <span className={t.totalValor}>{brl(total)}</span>
               </div>
             </div>
-            <div className={t.acoes}>
-              <button type="button" className={s.btn} onClick={() => setSaldoModal(true)}>
-                <Icon name="entrada" size={18} /> Definir saldo inicial
-              </button>
-              <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={() => setModal(true)}>
-                <Icon name="transfer" size={18} /> Nova transferência
-              </button>
-            </div>
+            {!soLeitura && (
+              <div className={t.acoes}>
+                <button type="button" className={s.btn} onClick={() => setSaldoModal(true)}>
+                  <Icon name="entrada" size={18} /> Definir saldo inicial
+                </button>
+                <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={() => setModal(true)}>
+                  <Icon name="transfer" size={18} /> Nova transferência
+                </button>
+              </div>
+            )}
           </>
         )}
       </Card>
@@ -121,9 +126,11 @@ export default function Transferencias() {
                     <td>{nomeLocal(tr.destino_nome)}</td>
                     <td className={s.num}>{brl(tr.valor_centavos)}</td>
                     <td>
-                      <button type="button" className={e.vazio} style={{ color: 'var(--danger)', fontWeight: 600 }} onClick={() => excluir(tr)}>
-                        Excluir
-                      </button>
+                      {!soLeitura && (
+                        <button type="button" className={e.vazio} style={{ color: 'var(--danger)', fontWeight: 600 }} onClick={() => excluir(tr)}>
+                          Excluir
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -274,10 +281,13 @@ function NovaTransferenciaModal({ onClose, onSalvo }: { onClose: () => void; onS
     }
   }
 
-  const opcoes = (
+  // Opções de local, excluindo um valor (para origem ≠ destino).
+  const opcoesExceto = (excluir: string) => (
     <>
-      <option value={CAIXA}>Caixa (espécie)</option>
-      {bancos.map((b) => <option key={b.id} value={b.id}>{b.nome}</option>)}
+      {CAIXA !== excluir && <option value={CAIXA}>Caixa (espécie)</option>}
+      {bancos
+        .filter((b) => String(b.id) !== excluir)
+        .map((b) => <option key={b.id} value={b.id}>{b.nome}</option>)}
     </>
   )
 
@@ -309,14 +319,14 @@ function NovaTransferenciaModal({ onClose, onSalvo }: { onClose: () => void; onS
             <label className={e.campo}>
               <span className={e.label}>De (origem)</span>
               <select className={e.input} value={origem} onChange={(ev) => setOrigem(ev.target.value)}>
-                {opcoes}
+                {opcoesExceto(destino)}
               </select>
             </label>
             <label className={e.campo}>
               <span className={e.label}>Para (destino)</span>
               <select className={e.input} value={destino} onChange={(ev) => setDestino(ev.target.value)}>
                 <option value="">Selecione…</option>
-                {opcoes}
+                {opcoesExceto(origem)}
               </select>
             </label>
           </div>

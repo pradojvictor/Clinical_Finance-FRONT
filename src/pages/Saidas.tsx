@@ -16,6 +16,7 @@ import {
   type NovaSaida,
   type SaidaDetalhe,
 } from '../lib/api'
+import { useAuth } from '../lib/auth'
 import { FORMA_LABEL, FORMAS_SAIDA, brl, dataBR, hojeISO, parseCentavos, periodoMes } from '../lib/format'
 import s from './page.module.css'
 import e from './Entradas.module.css'
@@ -34,6 +35,8 @@ export default function Saidas() {
   const [erro, setErro] = useState<string | null>(null)
   const [modal, setModal] = useState(false)
   const [editando, setEditando] = useState<SaidaDetalhe | null>(null)
+  const { user } = useAuth()
+  const soLeitura = user?.perfil === 'profissional'
 
   const carregar = useCallback(() => {
     const { de, ate } = periodoMes(ano, mes)
@@ -70,9 +73,11 @@ export default function Saidas() {
             onChange={(ev) => setBusca(ev.target.value)}
           />
         </div>
-        <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={() => setModal(true)}>
-          <Icon name="saida" size={18} /> Nova saída
-        </button>
+        {!soLeitura && (
+          <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={() => setModal(true)}>
+            <Icon name="saida" size={18} /> Nova saída
+          </button>
+        )}
       </div>
 
       <Card
@@ -109,7 +114,9 @@ export default function Saidas() {
                     <td>{sd.banco_nome ?? <span className={e.vazio}>—</span>}</td>
                     <td className={s.num}>{brl(sd.valor_centavos)}</td>
                     <td className={s.num}>
-                      <button type="button" className={e.acaoLink} onClick={() => setEditando(sd)}>Editar</button>
+                      {!soLeitura && (
+                        <button type="button" className={e.acaoLink} onClick={() => setEditando(sd)}>Editar</button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -287,8 +294,8 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
                 const filhas = categoriasDe(central.id)
                 if (filhas.length === 0) return null
                 return (
-                  <optgroup key={central.id} label={central.nome}>
-                    {filhas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  <optgroup key={central.id} label={central.rotulo}>
+                    {filhas.map((c) => <option key={c.id} value={c.id}>{c.rotulo}</option>)}
                   </optgroup>
                 )
               })}
@@ -300,7 +307,7 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
               <span className={e.label}>Subcategoria</span>
               <select className={e.input} value={subcategoriaId} onChange={(ev) => setSubcategoriaId(ev.target.value)}>
                 <option value="">Selecione…</option>
-                {subs.map((su) => <option key={su.id} value={su.id}>{su.nome}</option>)}
+                {subs.map((su) => <option key={su.id} value={su.id}>{su.rotulo}</option>)}
               </select>
             </label>
           )}
@@ -455,8 +462,8 @@ function EditarSaidaModal({ saida, onClose, onSalvo }: { saida: SaidaDetalhe; on
                 const filhas = categoriasDe(central.id)
                 if (filhas.length === 0) return null
                 return (
-                  <optgroup key={central.id} label={central.nome}>
-                    {filhas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  <optgroup key={central.id} label={central.rotulo}>
+                    {filhas.map((c) => <option key={c.id} value={c.id}>{c.rotulo}</option>)}
                   </optgroup>
                 )
               })}
@@ -468,7 +475,7 @@ function EditarSaidaModal({ saida, onClose, onSalvo }: { saida: SaidaDetalhe; on
               <span className={e.label}>Subcategoria</span>
               <select className={e.input} value={subcategoriaId} onChange={(ev) => setSubcategoriaId(ev.target.value)}>
                 <option value="">Selecione…</option>
-                {subs.map((su) => <option key={su.id} value={su.id}>{su.nome}</option>)}
+                {subs.map((su) => <option key={su.id} value={su.id}>{su.rotulo}</option>)}
               </select>
             </label>
           )}

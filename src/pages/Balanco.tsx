@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { ApiError, balancoApi, saldosApi, type Balanco as BalancoT, type Forma, type ResumoForma, type SaldoLocal } from '../lib/api'
-import { FORMA_LABEL, brl, periodoAno, periodoMes } from '../lib/format'
+import { FORMA_LABEL, brl, dataBR, periodoAno, periodoMes } from '../lib/format'
 import SeletorMesAno from '../components/ui/SeletorMesAno'
 import s from './page.module.css'
 import b from './Balanco.module.css'
@@ -27,6 +28,31 @@ export default function Balanco() {
   const [totalSaldos, setTotalSaldos] = useState(0)
   const [erro, setErro] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(false)
+  const [gaveta, setGaveta] = useState<{
+    kind: 'entrada' | 'saida' | 'transferencia' | 'todos'
+    grupoId: number | null
+    origemId?: number | null
+    destinoId?: number | null
+    titulo: string
+    todoKind?: boolean
+  } | null>(null)
+
+  const abrirGaveta = (kind: 'entrada' | 'saida' | 'todos', grupoId: number | null, titulo: string) =>
+    setGaveta({ kind, grupoId, titulo })
+
+  const movsFiltrados = useMemo(() => {
+    const movs = dados?.movimentos ?? []
+    if (!gaveta || gaveta.kind === 'todos') return movs
+    // Histórico completo de um lado (todas as entradas / saídas / transferências).
+    if (gaveta.todoKind) return movs.filter((m) => m.kind === gaveta.kind)
+    // Transferência: casa pelo par origem → destino.
+    if (gaveta.kind === 'transferencia')
+      return movs.filter(
+        (m) => m.kind === 'transferencia' && m.origem_id === gaveta.origemId && m.destino_id === gaveta.destinoId,
+      )
+    // Igualdade exata: "Sem tipo"/"Sem categoria" (grupo_id null) casa só com null.
+    return movs.filter((m) => m.kind === gaveta.kind && m.grupo_id === gaveta.grupoId)
+  }, [dados, gaveta])
 
   // Onde o dinheiro está hoje (saldo atual por local — não depende do período).
   useEffect(() => {
@@ -64,6 +90,7 @@ export default function Balanco() {
     : 0
   const totalSaidas = dados?.total.saidas_centavos ?? 0
   const saldoGeral = totalEntradas - totalSaidas
+  const totalInicial = (saldos ?? []).reduce((acc, x) => acc + x.inicial_centavos, 0)
 
   return (
     <div className={s.stack}>
@@ -105,6 +132,71 @@ export default function Balanco() {
         </div>
       </div>
 
+      {/* Caracterização por tipo — logo abaixo do card de saldo */}
+      {dados && (
+        <div className={b.tipos}>
+          <div className={b.tiposCol}>
+            <div className={b.tiposHead}>
+              <span className={b.tiposTit}>Entradas por tipo</span>
+              <button
+                type="button"
+                className={b.verLink}
+                onClick={() => setGaveta({ kind: 'entrada', grupoId: null, titulo: 'Histórico de entradas', todoKind: true })}
+              >
+                Histórico
+              </button>
+            </div>
+            {dados.por_tipo_entrada.length === 0 ? (
+              <p className={b.vazio}>Sem entradas no período.</p>
+            ) : (
+              dados.por_tipo_entrada.map((t) => (
+                <button
+                  key={t.tipo_id ?? 'sem'}
+                  type="button"
+                  className={b.tipoRow}
+                  onClick={() => abrirGaveta('entrada', t.tipo_id, `Entradas · ${t.tipo_nome ?? 'Sem tipo'}`)}
+                >
+                  <span className={b.tipoNome}>
+                    {t.tipo_nome ?? 'Sem tipo'} <span className={b.tipoQtd}>{t.qtd}</span>
+                  </span>
+                  <span className={b.tipoValor}>{brl(comTaxa ? t.liquido_centavos : t.bruto_centavos)}</span>
+                </button>
+              ))
+            )}
+          </div>
+
+          <div className={b.tiposCol}>
+            <div className={b.tiposHead}>
+              <span className={b.tiposTit}>Saídas por categoria</span>
+              <button
+                type="button"
+                className={b.verLink}
+                onClick={() => setGaveta({ kind: 'saida', grupoId: null, titulo: 'Histórico de saídas', todoKind: true })}
+              >
+                Histórico
+              </button>
+            </div>
+            {dados.por_categoria_saida.length === 0 ? (
+              <p className={b.vazio}>Sem saídas no período.</p>
+            ) : (
+              dados.por_categoria_saida.map((c) => (
+                <button
+                  key={c.categoria_id ?? 'sem'}
+                  type="button"
+                  className={b.tipoRow}
+                  onClick={() => abrirGaveta('saida', c.categoria_id, `Saídas · ${c.categoria_nome ?? 'Sem categoria'}`)}
+                >
+                  <span className={b.tipoNome}>
+                    {c.categoria_nome ?? 'Sem categoria'} <span className={b.tipoQtd}>{c.qtd}</span>
+                  </span>
+                  <span className={`${b.tipoValor} ${b.neg}`}>{brl(c.total_centavos)}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Por forma */}
       <div className={b.grid}>
         {(dados?.por_forma ?? []).map((r) => {
@@ -128,23 +220,72 @@ export default function Balanco() {
         })}
       </div>
 
+      {/* Transferências do período — card clicável (como entradas/saídas) */}
+      {dados && dados.transferencias.length > 0 && (
+        <div className={b.tiposCol}>
+          <div className={b.tiposHead}>
+            <span className={b.tiposTit}>Transferências</span>
+            <button
+              type="button"
+              className={b.verLink}
+              onClick={() => setGaveta({ kind: 'transferencia', grupoId: null, titulo: 'Histórico de transferências', todoKind: true })}
+            >
+              Histórico
+            </button>
+          </div>
+          {dados.transferencias.map((t, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className={b.tipoRow}
+              onClick={() =>
+                setGaveta({
+                  kind: 'transferencia',
+                  grupoId: null,
+                  origemId: t.origem_id,
+                  destinoId: t.destino_id,
+                  titulo: `${t.origem_nome} → ${t.destino_nome}`,
+                })
+              }
+            >
+              <span className={b.tipoNome}>
+                {t.origem_nome} <span className={b.transfSeta}>→</span> {t.destino_nome}{' '}
+                <span className={b.tipoQtd}>{t.qtd}</span>
+              </span>
+              <span className={b.tipoValor}>{brl(t.total_centavos)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Onde está o dinheiro (saldo atual por local) */}
       {saldos && saldos.length > 0 && (
         <div className={b.onde}>
           <div className={b.ondeHead}>
             <span className={b.ondeTit}>Onde está o dinheiro</span>
-            <span className={b.ondeNota}>saldo atual — espécie e bancos</span>
+            <span className={b.ondeNota}>saldo atual · aporte inicial</span>
           </div>
           <div className={b.ondeLista}>
             {saldos.map((x) => (
               <div key={x.banco_id ?? 'caixa'} className={b.ondeRow}>
                 <span className={b.ondeNome}>
                   <span className={b.dot} style={{ background: x.banco_id == null ? 'var(--pay-especie)' : 'var(--brand-blue)' }} />
-                  {x.nome}
+                  <span className={b.ondeNomeTxt}>
+                    {x.nome}
+                    {x.inicial_centavos !== 0 && (
+                      <span className={b.ondeInicial}>aporte inicial · {brl(x.inicial_centavos)}</span>
+                    )}
+                  </span>
                 </span>
                 <span className={x.saldo_centavos < 0 ? b.neg : ''}>{brl(x.saldo_centavos)}</span>
               </div>
             ))}
+            {totalInicial !== 0 && (
+              <div className={b.ondeAporte}>
+                <span>Aporte inicial total</span>
+                <span>{brl(totalInicial)}</span>
+              </div>
+            )}
             <div className={b.ondeTotal}>
               <span>Total</span>
               <span>{brl(totalSaldos)}</span>
@@ -154,6 +295,52 @@ export default function Balanco() {
       )}
 
       {carregando && <div className={b.carregando}>Atualizando…</div>}
+
+      {/* Gaveta — histórico detalhado */}
+      {gaveta &&
+        createPortal(
+          <div className={b.gavetaBackdrop} onMouseDown={() => setGaveta(null)}>
+            <aside className={b.gaveta} onMouseDown={(e) => e.stopPropagation()}>
+              <div className={b.gavetaHead}>
+                <span className={b.gavetaTit}>{gaveta.titulo}</span>
+                <button type="button" className={b.gavetaFechar} onClick={() => setGaveta(null)} aria-label="Fechar">
+                  ×
+                </button>
+              </div>
+              <div className={b.gavetaBody}>
+                {movsFiltrados.length === 0 ? (
+                  <p className={b.vazio}>Nada no período.</p>
+                ) : (
+                  movsFiltrados.map((m) => (
+                    <div key={`${m.kind}-${m.id}`} className={b.movRow}>
+                      <span
+                        className={`${b.movDot} ${m.kind === 'entrada' ? b.movEnt : m.kind === 'saida' ? b.movSai : b.movTransf}`}
+                      />
+                      <div className={b.movCorpo}>
+                        <div className={b.movTop}>
+                          <span className={b.movRotulo}>
+                            {m.rotulo ?? (m.kind === 'entrada' ? 'Sem tipo' : m.kind === 'saida' ? 'Sem categoria' : 'Transferência')}
+                          </span>
+                          <span className={m.kind === 'entrada' ? b.pos : m.kind === 'saida' ? b.neg : undefined}>
+                            {m.kind === 'entrada' ? '+ ' : m.kind === 'saida' ? '− ' : ''}
+                            {brl(m.kind === 'entrada' && comTaxa && m.liquido_centavos != null ? m.liquido_centavos : m.valor_centavos)}
+                          </span>
+                        </div>
+                        <span className={b.movMeta}>
+                          {dataBR(m.data)}
+                          {m.forma ? ` · ${FORMA_LABEL[m.forma]}` : ''}
+                          {m.detalhe ? ` · ${m.detalhe}` : ''}
+                          {m.paciente_nome ? ` · ${m.paciente_nome}` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </aside>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

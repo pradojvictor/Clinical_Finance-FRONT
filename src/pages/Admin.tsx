@@ -11,6 +11,8 @@ import {
   bancosApi,
   categoriasSaidaApi,
   taxasApi,
+  tiposEntradaApi,
+  subtiposEntradaApi,
   usuariosApi,
   type Banco,
   type CategoriaSaida,
@@ -19,20 +21,24 @@ import {
   type NovoUsuario,
   type Perfil,
   type RegistroAuditoria,
+  type SubtipoEntrada,
   type Taxa,
+  type TipoEntrada,
   type UsuarioAdmin,
 } from '../lib/api'
+import { SECOES, SECAO_LABEL } from '../config/nav'
 import { brl } from '../lib/format'
 import s from './page.module.css'
 import a from './Admin.module.css'
 import e from './Entradas.module.css'
 
-type Aba = 'usuarios' | 'bancos' | 'taxas' | 'categorias' | 'registros'
+type Aba = 'usuarios' | 'bancos' | 'taxas' | 'categorias' | 'tipos-entrada' | 'registros'
 const ABAS: { id: Aba; label: string }[] = [
   { id: 'usuarios', label: 'Usuários' },
   { id: 'bancos', label: 'Bancos' },
   { id: 'taxas', label: 'Taxas' },
   { id: 'categorias', label: 'Categorias de saída' },
+  { id: 'tipos-entrada', label: 'Categorias de entrada' },
   { id: 'registros', label: 'Registros' },
 ]
 
@@ -70,6 +76,7 @@ export default function Admin() {
       {aba === 'bancos' && <BancosPanel />}
       {aba === 'taxas' && <TaxasPanel />}
       {aba === 'categorias' && <CategoriasSaidaPanel />}
+      {aba === 'tipos-entrada' && <TiposEntradaPanel />}
       {aba === 'registros' && <AuditoriaPanel />}
     </div>
   )
@@ -168,6 +175,232 @@ function BancosPanel() {
         </ul>
       )}
     </Card>
+  )
+}
+
+/* ---- Tipos de entrada (com subcategorias) ------------------------- */
+function TiposEntradaPanel() {
+  const [tipos, setTipos] = useState<TipoEntrada[] | null>(null)
+  const [subtipos, setSubtipos] = useState<SubtipoEntrada[]>([])
+  const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
+  const [erro, setErro] = useState<string | null>(null)
+  const [novo, setNovo] = useState('')
+  const [salvando, setSalvando] = useState(false)
+
+  const carregar = () => {
+    tiposEntradaApi.listar().then((r) => setTipos(r.tipos)).catch((e) => setErro(msg(e)))
+    subtiposEntradaApi.listar().then((r) => setSubtipos(r.subtipos)).catch(() => {})
+  }
+  useEffect(() => {
+    carregar()
+    usuariosApi.listar().then((r) => setUsuarios(r.usuarios.filter((u) => u.ativo))).catch(() => {})
+  }, [])
+
+  const adicionar = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!novo.trim()) return
+    setSalvando(true)
+    setErro(null)
+    try {
+      await tiposEntradaApi.criar(novo.trim())
+      setNovo('')
+      carregar()
+    } catch (e) {
+      setErro(msg(e))
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  const toggle = async (t: TipoEntrada) => {
+    setErro(null)
+    try {
+      await tiposEntradaApi.atualizar(t.id, { ativo: !t.ativo })
+      carregar()
+    } catch (e) {
+      setErro(msg(e))
+    }
+  }
+
+  const excluir = async (t: TipoEntrada) => {
+    if (!window.confirm(`Excluir o tipo "${t.nome}" e suas subcategorias?`)) return
+    setErro(null)
+    try {
+      await tiposEntradaApi.excluir(t.id)
+      carregar()
+    } catch (e) {
+      setErro(msg(e))
+    }
+  }
+
+  return (
+    <Card
+      title="Categorias de entrada"
+      action={<Badge tone="neutral">{tipos?.length ?? 0}</Badge>}
+    >
+      <form className={a.addRow} onSubmit={adicionar}>
+        <input
+          className={s.input}
+          value={novo}
+          onChange={(e) => setNovo(e.target.value)}
+          placeholder="ex.: Consulta, Exame, Retorno…"
+          maxLength={80}
+        />
+        <button type="submit" className={`${s.btn} ${s.btnPrimary}`} disabled={salvando}>
+          <Icon name="entrada" size={16} /> Adicionar
+        </button>
+      </form>
+
+      {erro && <div className={a.erro}>{erro}</div>}
+
+      {tipos === null ? (
+        <div className={a.carregando}>Carregando…</div>
+      ) : tipos.length === 0 ? (
+        <p className={a.nota}>Nenhum tipo cadastrado.</p>
+      ) : (
+        <div className={a.arvore}>
+          {tipos.map((t) => (
+            <div key={t.id} className={a.central}>
+              <div className={a.centralHead}>
+                <span className={a.centralNome}>{t.nome}</span>
+                <Badge tone={t.ativo ? 'success' : 'neutral'}>{t.ativo ? 'ativo' : 'inativo'}</Badge>
+                <span className={a.acoesCat}>
+                  <button type="button" className={a.linkBtn} onClick={() => toggle(t)}>
+                    {t.ativo ? 'Desativar' : 'Ativar'}
+                  </button>
+                  <button type="button" className={a.linkDanger} onClick={() => excluir(t)}>
+                    Excluir
+                  </button>
+                </span>
+              </div>
+              <SubtiposDeTipo
+                tipoId={t.id}
+                subtipos={subtipos.filter((x) => x.tipo_id === t.id)}
+                usuarios={usuarios}
+                onErro={setErro}
+                onChange={carregar}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+/* Subcategorias de UM tipo: profissional (usuário) OU nome próprio. */
+function SubtiposDeTipo({
+  tipoId,
+  subtipos,
+  usuarios,
+  onErro,
+  onChange,
+}: {
+  tipoId: number
+  subtipos: SubtipoEntrada[]
+  usuarios: UsuarioAdmin[]
+  onErro: (m: string | null) => void
+  onChange: () => void
+}) {
+  const [kind, setKind] = useState<'profissional' | 'outro'>('profissional')
+  const [usuarioId, setUsuarioId] = useState('')
+  const [nome, setNome] = useState('')
+  const [salvando, setSalvando] = useState(false)
+
+  const jaUsados = new Set(subtipos.filter((x) => x.usuario_id).map((x) => x.usuario_id))
+  const disponiveis = usuarios.filter((u) => !jaUsados.has(u.id))
+
+  const adicionar = async (e: FormEvent) => {
+    e.preventDefault()
+    onErro(null)
+    setSalvando(true)
+    try {
+      if (kind === 'profissional') {
+        if (!usuarioId) return
+        await subtiposEntradaApi.criar({ tipo_id: tipoId, usuario_id: Number(usuarioId) })
+        setUsuarioId('')
+      } else {
+        if (!nome.trim()) return
+        await subtiposEntradaApi.criar({ tipo_id: tipoId, nome: nome.trim() })
+        setNome('')
+      }
+      onChange()
+    } catch (x) {
+      onErro(msg(x))
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  const toggle = async (sub: SubtipoEntrada) => {
+    onErro(null)
+    try {
+      await subtiposEntradaApi.atualizar(sub.id, { ativo: !sub.ativo })
+      onChange()
+    } catch (x) {
+      onErro(msg(x))
+    }
+  }
+
+  const excluir = async (sub: SubtipoEntrada) => {
+    if (!window.confirm(`Excluir a subcategoria "${sub.rotulo}"?`)) return
+    onErro(null)
+    try {
+      await subtiposEntradaApi.excluir(sub.id)
+      onChange()
+    } catch (x) {
+      onErro(msg(x))
+    }
+  }
+
+  return (
+    <div className={a.catBloco}>
+      {subtipos.map((sub) => (
+        <div key={sub.id} className={a.subItem}>
+          <span className={a.subNome}>{sub.rotulo}</span>
+          <Badge tone="neutral">{sub.usuario_id ? 'profissional' : 'outro'}</Badge>
+          {!sub.ativo && <Badge tone="neutral">inativo</Badge>}
+          <span className={a.acoesCat}>
+            <button type="button" className={a.linkBtn} onClick={() => toggle(sub)}>
+              {sub.ativo ? 'Desativar' : 'Ativar'}
+            </button>
+            <button type="button" className={a.linkDanger} onClick={() => excluir(sub)}>
+              Excluir
+            </button>
+          </span>
+        </div>
+      ))}
+      <form className={a.addInline} onSubmit={adicionar}>
+        <select
+          className={a.addInput}
+          style={{ maxWidth: '9rem' }}
+          value={kind}
+          onChange={(e) => setKind(e.target.value as 'profissional' | 'outro')}
+        >
+          <option value="profissional">Profissional</option>
+          <option value="outro">Outro</option>
+        </select>
+        {kind === 'profissional' ? (
+          <select className={a.addInput} value={usuarioId} onChange={(e) => setUsuarioId(e.target.value)}>
+            <option value="">Selecione o profissional…</option>
+            {disponiveis.map((u) => (
+              <option key={u.id} value={u.id}>{u.nome}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            className={a.addInput}
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Nome da subcategoria"
+            maxLength={80}
+          />
+        )}
+        <button type="submit" className={a.miniBtn} disabled={salvando}>
+          Adicionar
+        </button>
+      </form>
+    </div>
   )
 }
 
@@ -301,6 +534,12 @@ const TEXTO_ACAO: Record<string, string> = {
   'categoria_saida.criar': 'Criou uma categoria de saída',
   'categoria_saida.editar': 'Editou uma categoria de saída',
   'categoria_saida.excluir': 'Excluiu uma categoria de saída',
+  'tipo_entrada.criar': 'Criou um tipo de entrada',
+  'tipo_entrada.editar': 'Editou um tipo de entrada',
+  'tipo_entrada.excluir': 'Excluiu um tipo de entrada',
+  'subtipo_entrada.criar': 'Criou uma subcategoria de entrada',
+  'subtipo_entrada.editar': 'Editou uma subcategoria de entrada',
+  'subtipo_entrada.excluir': 'Excluiu uma subcategoria de entrada',
   'usuario.criar': 'Criou um profissional',
   'usuario.editar': 'Editou um profissional',
   'usuario.senha': 'Trocou a senha de um profissional',
@@ -315,7 +554,7 @@ const TEXTO_ACAO: Record<string, string> = {
 }
 
 function categoriaDe(acao: string): CategoriaLog {
-  if (/^(entrada|saida|transferencia|saldo_inicial|banco|taxa|categoria_saida)/.test(acao)) return 'dinheiro'
+  if (/^(entrada|saida|transferencia|saldo_inicial|banco|taxa|categoria_saida|tipo_entrada|subtipo_entrada)/.test(acao)) return 'dinheiro'
   if (acao.startsWith('cliente')) return 'clientes'
   if (acao.startsWith('usuario') || acao === 'login' || acao === 'logout' || acao === 'login.falha') return 'profissionais'
   return 'outros'
@@ -425,23 +664,26 @@ function AuditoriaPanel() {
   )
 }
 
-/* ---- Categorias de saída (árvore) --------------------------------- */
-function AddInline({
+/* ---- Categorias de saída (árvore, no estilo das de entrada) -------- */
+/* Form inline sempre visível para adicionar (igual ao das subcategorias de entrada). */
+function AddInlineForm({
   placeholder,
   onSave,
-  onCancel,
+  className,
 }: {
   placeholder: string
   onSave: (nome: string) => void
-  onCancel: () => void
+  className?: string
 }) {
   const [nome, setNome] = useState('')
   return (
     <form
-      className={a.addInline}
+      className={className ?? a.addInline}
       onSubmit={(ev) => {
         ev.preventDefault()
-        if (nome.trim()) onSave(nome.trim())
+        if (!nome.trim()) return
+        onSave(nome.trim())
+        setNome('')
       }}
     >
       <input
@@ -450,37 +692,105 @@ function AddInline({
         onChange={(ev) => setNome(ev.target.value)}
         placeholder={placeholder}
         maxLength={80}
-        autoFocus
       />
-      <button type="submit" className={a.miniBtn}>Salvar</button>
-      <button type="button" className={a.miniGhost} onClick={onCancel}>Cancelar</button>
+      <button type="submit" className={a.miniBtn}>Adicionar</button>
+    </form>
+  )
+}
+
+/* Subcategoria de saída: funcionário (usuário) OU nome próprio (como os subtipos de entrada). */
+function SubcategoriaForm({
+  usuarios,
+  jaFuncionarios,
+  onNome,
+  onFuncionario,
+}: {
+  usuarios: UsuarioAdmin[]
+  jaFuncionarios: number[]
+  onNome: (nome: string) => void
+  onFuncionario: (usuarioId: number) => void
+}) {
+  const [kind, setKind] = useState<'funcionario' | 'outro'>('outro')
+  const [usuarioId, setUsuarioId] = useState('')
+  const [nome, setNome] = useState('')
+
+  const usados = new Set(jaFuncionarios)
+  const disponiveis = usuarios.filter((u) => !usados.has(u.id))
+
+  const submit = (ev: FormEvent) => {
+    ev.preventDefault()
+    if (kind === 'funcionario') {
+      if (!usuarioId) return
+      onFuncionario(Number(usuarioId))
+      setUsuarioId('')
+    } else {
+      if (!nome.trim()) return
+      onNome(nome.trim())
+      setNome('')
+    }
+  }
+
+  return (
+    <form className={a.addInline} onSubmit={submit}>
+      <select
+        className={a.addInput}
+        style={{ maxWidth: '9rem' }}
+        value={kind}
+        onChange={(e) => setKind(e.target.value as 'funcionario' | 'outro')}
+      >
+        <option value="funcionario">Funcionário</option>
+        <option value="outro">Outro</option>
+      </select>
+      {kind === 'funcionario' ? (
+        <select className={a.addInput} value={usuarioId} onChange={(e) => setUsuarioId(e.target.value)}>
+          <option value="">Selecione o funcionário…</option>
+          {disponiveis.map((u) => (
+            <option key={u.id} value={u.id}>{u.nome}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          className={a.addInput}
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="Nova subcategoria (ex.: Maria)"
+          maxLength={80}
+        />
+      )}
+      <button type="submit" className={a.miniBtn}>Adicionar</button>
     </form>
   )
 }
 
 function CategoriasSaidaPanel() {
   const [cats, setCats] = useState<CategoriaSaida[] | null>(null)
+  const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
   const [erro, setErro] = useState<string | null>(null)
   const [novaCentral, setNovaCentral] = useState('')
-  const [addTo, setAddTo] = useState<{ nivel: 'categoria' | 'subcategoria'; parentId: number } | null>(null)
 
   const carregar = () => {
     categoriasSaidaApi.listar().then((r) => setCats(r.categorias)).catch((x) => setErro(msg(x)))
   }
-  useEffect(carregar, [])
+  useEffect(() => {
+    carregar()
+    usuariosApi.listar().then((r) => setUsuarios(r.usuarios.filter((u) => u.ativo))).catch(() => {})
+  }, [])
 
-  const criar = async (nome: string, nivel: NivelCategoriaSaida, parent_id: number | null) => {
-    if (!nome.trim()) return
+  const criar = async (
+    nivel: NivelCategoriaSaida,
+    parent_id: number | null,
+    dados: { nome?: string; usuario_id?: number },
+  ) => {
     setErro(null)
     try {
-      await categoriasSaidaApi.criar({ nome: nome.trim(), nivel, parent_id })
+      await categoriasSaidaApi.criar({ nivel, parent_id, ...dados })
       carregar()
     } catch (x) {
       setErro(msg(x))
     }
   }
   const renomear = async (c: CategoriaSaida) => {
-    const nome = window.prompt('Novo nome:', c.nome)
+    const nome = window.prompt('Novo nome:', c.rotulo)
     if (nome == null || !nome.trim()) return
     setErro(null)
     try {
@@ -501,7 +811,7 @@ function CategoriasSaidaPanel() {
   }
   const excluir = async (c: CategoriaSaida) => {
     const extra = c.nivel === 'subcategoria' ? '' : ' e tudo que está dentro'
-    if (!window.confirm(`Excluir “${c.nome}”${extra}?`)) return
+    if (!window.confirm(`Excluir “${c.rotulo}”${extra}?`)) return
     setErro(null)
     try {
       await categoriasSaidaApi.excluir(c.id)
@@ -517,7 +827,9 @@ function CategoriasSaidaPanel() {
 
   const acoes = (c: CategoriaSaida) => (
     <>
-      <button type="button" className={a.linkBtn} onClick={() => renomear(c)}>Renomear</button>
+      {c.usuario_id == null && (
+        <button type="button" className={a.linkBtn} onClick={() => renomear(c)}>Renomear</button>
+      )}
       <button type="button" className={a.linkBtn} onClick={() => toggle(c)}>{c.ativo ? 'Desativar' : 'Ativar'}</button>
       <button type="button" className={a.linkDanger} onClick={() => excluir(c)}>Excluir</button>
     </>
@@ -534,7 +846,8 @@ function CategoriasSaidaPanel() {
         className={a.addRow}
         onSubmit={(ev) => {
           ev.preventDefault()
-          criar(novaCentral, 'central', null)
+          if (!novaCentral.trim()) return
+          criar('central', null, { nome: novaCentral.trim() })
           setNovaCentral('')
         }}
       >
@@ -560,7 +873,7 @@ function CategoriasSaidaPanel() {
             <div key={central.id} className={a.central}>
               <div className={a.centralHead}>
                 <span className={a.centralTag}>central</span>
-                <span className={a.centralNome}>{central.nome}</span>
+                <span className={a.centralNome}>{central.rotulo}</span>
                 {!central.ativo && <Badge tone="neutral">inativo</Badge>}
                 <span className={a.acoesCat}>{acoes(central)}</span>
               </div>
@@ -568,49 +881,34 @@ function CategoriasSaidaPanel() {
               {categoriasDe(central.id).map((cat) => (
                 <div key={cat.id} className={a.catBloco}>
                   <div className={a.catItem}>
-                    <span className={a.catNome}>{cat.nome}</span>
+                    <span className={a.catNome}>{cat.rotulo}</span>
                     {!cat.ativo && <Badge tone="neutral">inativo</Badge>}
-                    <span className={a.acoesCat}>
-                      <button type="button" className={a.linkBtn} onClick={() => setAddTo({ nivel: 'subcategoria', parentId: cat.id })}>+ subcategoria</button>
-                      {acoes(cat)}
-                    </span>
+                    <span className={a.acoesCat}>{acoes(cat)}</span>
                   </div>
 
                   {subsDe(cat.id).map((su) => (
                     <div key={su.id} className={a.subItem}>
-                      <span className={a.subNome}>{su.nome}</span>
+                      <span className={a.subNome}>{su.rotulo}</span>
+                      <Badge tone="neutral">{su.usuario_id ? 'funcionário' : 'outro'}</Badge>
                       {!su.ativo && <Badge tone="neutral">inativo</Badge>}
                       <span className={a.acoesCat}>{acoes(su)}</span>
                     </div>
                   ))}
 
-                  {addTo?.nivel === 'subcategoria' && addTo.parentId === cat.id && (
-                    <AddInline
-                      placeholder="Nome da subcategoria (ex.: Maria)"
-                      onCancel={() => setAddTo(null)}
-                      onSave={(nome) => {
-                        setAddTo(null)
-                        criar(nome, 'subcategoria', cat.id)
-                      }}
-                    />
-                  )}
+                  <SubcategoriaForm
+                    usuarios={usuarios}
+                    jaFuncionarios={subsDe(cat.id).filter((x) => x.usuario_id).map((x) => x.usuario_id!)}
+                    onNome={(nome) => criar('subcategoria', cat.id, { nome })}
+                    onFuncionario={(usuario_id) => criar('subcategoria', cat.id, { usuario_id })}
+                  />
                 </div>
               ))}
 
-              {addTo?.nivel === 'categoria' && addTo.parentId === central.id ? (
-                <AddInline
-                  placeholder="Nome da categoria (ex.: Aluguel)"
-                  onCancel={() => setAddTo(null)}
-                  onSave={(nome) => {
-                    setAddTo(null)
-                    criar(nome, 'categoria', central.id)
-                  }}
-                />
-              ) : (
-                <button type="button" className={a.addCat} onClick={() => setAddTo({ nivel: 'categoria', parentId: central.id })}>
-                  + nova categoria
-                </button>
-              )}
+              <AddInlineForm
+                className={a.addCatForm}
+                placeholder="Nova categoria ligada à central (ex.: Aluguel)"
+                onSave={(nome) => criar('categoria', central.id, { nome })}
+              />
             </div>
           ))}
         </div>
@@ -621,11 +919,12 @@ function CategoriasSaidaPanel() {
 
 /* ---- Usuários ----------------------------------------------------- */
 const COLUNAS = ['Usuário', 'Perfil', 'Situação', 'Último acesso', '']
-const PERFIL_LABEL: Record<Perfil, string> = { gestor: 'Gestor', operador: 'Operador' }
-const PERFIL_TONE: Record<Perfil, BadgeTone> = { gestor: 'blue', operador: 'neutral' }
+const PERFIL_LABEL: Record<Perfil, string> = { gestor: 'Gestor', operador: 'Operador', profissional: 'Profissional' }
+const PERFIL_TONE: Record<Perfil, BadgeTone> = { gestor: 'blue', operador: 'neutral', profissional: 'success' }
 const PERFIS: { nome: string; tone: BadgeTone; desc: string }[] = [
   { nome: 'Gestor', tone: 'blue', desc: 'Acesso total: entradas, saídas, procedimentos, balanço e administração.' },
   { nome: 'Operador', tone: 'neutral', desc: 'Acesso parcial: registro do que entra (entradas e procedimentos).' },
+  { nome: 'Profissional', tone: 'success', desc: 'Só leitura, e apenas nas seções que você liberar (definidas no cadastro).' },
 ]
 
 function fmtAcesso(iso: string | null): string {
@@ -775,7 +1074,7 @@ function UsuariosPanel() {
 }
 
 /* ---- Modal: novo / editar usuário --------------------------------- */
-const PERFIS_OPCOES: Perfil[] = ['gestor', 'operador']
+const PERFIS_OPCOES: Perfil[] = ['gestor', 'operador', 'profissional']
 
 function UsuarioModal({
   usuario,
@@ -792,6 +1091,7 @@ function UsuarioModal({
   const [login, setLogin] = useState(usuario?.login ?? '')
   const [nome, setNome] = useState(usuario?.nome ?? '')
   const [perfil, setPerfil] = useState<Perfil>(usuario?.perfil ?? 'operador')
+  const [permissoes, setPermissoes] = useState<string[]>(usuario?.permissoes ?? [])
   const [senha, setSenha] = useState('')
   const [mostrar, setMostrar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -818,10 +1118,11 @@ function UsuarioModal({
 
     setEnviando(true)
     try {
+      const perms = perfil === 'profissional' ? permissoes : []
       if (editando) {
-        await usuariosApi.atualizar(usuario!.id, { nome: nome.trim(), perfil })
+        await usuariosApi.atualizar(usuario!.id, { nome: nome.trim(), perfil, permissoes: perms })
       } else {
-        const dados: NovoUsuario = { login: login.trim().toLowerCase(), nome: nome.trim(), perfil, senha }
+        const dados: NovoUsuario = { login: login.trim().toLowerCase(), nome: nome.trim(), perfil, permissoes: perms, senha }
         await usuariosApi.criar(dados)
       }
       onSalvo()
@@ -869,6 +1170,29 @@ function UsuarioModal({
             </select>
             {ehVoce && <span className={a.hint}>Você não pode alterar o próprio perfil.</span>}
           </label>
+
+          {perfil === 'profissional' && (
+            <div className={e.campo}>
+              <span className={e.label}>O que ele pode ver (só leitura)</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem 1rem' }}>
+                {SECOES.map((sec) => (
+                  <label key={sec} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: 'var(--fs-md)', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={permissoes.includes(sec)}
+                      onChange={(ev) =>
+                        setPermissoes((cur) =>
+                          ev.target.checked ? [...cur, sec] : cur.filter((x) => x !== sec),
+                        )
+                      }
+                    />
+                    {SECAO_LABEL[sec]}
+                  </label>
+                ))}
+              </div>
+              <span className={a.hint}>Início é sempre visível. Admin, nunca.</span>
+            </div>
+          )}
 
           {!editando && (
             <label className={e.campo}>

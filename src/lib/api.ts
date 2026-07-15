@@ -50,6 +50,8 @@ export interface Usuario {
   nome: string
   perfil: PerfilUsuario
   email?: string
+  /** Seções liberadas (só para 'profissional'). */
+  permissoes?: string[]
 }
 
 export const authApi = {
@@ -166,8 +168,12 @@ export interface EntradaDetalhe {
   taxa_bp: number
   valor_liquido_centavos: number
   banco_id: number | null
+  tipo_id: number | null
+  subtipo_id: number | null
   paciente_nome: string | null
   banco_nome: string | null
+  tipo_nome: string | null
+  subtipo_nome: string | null
   operador_nome: string
   observacao: string | null
 }
@@ -177,6 +183,8 @@ export interface NovaEntrada {
   valor_centavos: number
   data?: string
   banco_id?: number | null
+  tipo_id?: number | null
+  subtipo_id?: number | null
   paciente_id?: number | null
   paciente?: { nome: string; cpf?: string; email?: string }
   observacao?: string
@@ -236,7 +244,45 @@ export interface EditarEntrada {
   forma?: Forma
   valor_centavos?: number
   banco_id?: number | null
+  tipo_id?: number | null
+  subtipo_id?: number | null
   observacao?: string
+}
+
+// ---- Tipos de entrada (lista plana, gerenciada no Admin) ----------
+export interface TipoEntrada {
+  id: number
+  nome: string
+  ativo: boolean
+}
+export const tiposEntradaApi = {
+  listar: () => req<{ tipos: TipoEntrada[] }>('/tipos-entrada'),
+  criar: (nome: string) =>
+    req<{ tipo: TipoEntrada }>('/tipos-entrada', { method: 'POST', body: JSON.stringify({ nome }) }),
+  atualizar: (id: number, dados: Partial<{ nome: string; ativo: boolean }>) =>
+    req<{ tipo: TipoEntrada }>(`/tipos-entrada/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }),
+  excluir: (id: number) => req<{ ok: boolean }>(`/tipos-entrada/${id}`, { method: 'DELETE' }),
+}
+
+// ---- Subtipos (subcategorias) de um tipo de entrada ---------------
+// Cada subtipo é um profissional (usuario_id) OU um nome próprio (nome).
+export interface SubtipoEntrada {
+  id: number
+  tipo_id: number
+  usuario_id: number | null
+  nome: string | null
+  usuario_nome: string | null
+  rotulo: string
+  ativo: boolean
+}
+export const subtiposEntradaApi = {
+  listar: (tipoId?: number) =>
+    req<{ subtipos: SubtipoEntrada[] }>(`/subtipos-entrada${tipoId ? `?tipo_id=${tipoId}` : ''}`),
+  criar: (dados: { tipo_id: number; usuario_id?: number; nome?: string }) =>
+    req<{ subtipo: SubtipoEntrada }>('/subtipos-entrada', { method: 'POST', body: JSON.stringify(dados) }),
+  atualizar: (id: number, dados: Partial<{ nome: string; ativo: boolean }>) =>
+    req<{ subtipo: SubtipoEntrada }>(`/subtipos-entrada/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }),
+  excluir: (id: number) => req<{ ok: boolean }>(`/subtipos-entrada/${id}`, { method: 'DELETE' }),
 }
 
 // ---- Saídas -------------------------------------------------------
@@ -349,15 +395,19 @@ export const transferenciasApi = {
 export type NivelCategoriaSaida = 'central' | 'categoria' | 'subcategoria'
 export interface CategoriaSaida {
   id: number
-  nome: string
+  nome: string | null
   parent_id: number | null
   nivel: NivelCategoriaSaida
+  usuario_id: number | null
+  usuario_nome: string | null
+  rotulo: string
   ativo: boolean
 }
 export interface NovaCategoriaSaida {
-  nome: string
+  nome?: string | null
   nivel: NivelCategoriaSaida
   parent_id?: number | null
+  usuario_id?: number | null
 }
 export const categoriasSaidaApi = {
   listar: () => req<{ categorias: CategoriaSaida[] }>('/categorias-saida'),
@@ -384,10 +434,49 @@ export interface BalancoTotal {
   saidas_centavos: number
   qtd_saidas: number
 }
+export interface ResumoTipoEntrada {
+  tipo_id: number | null
+  tipo_nome: string | null
+  bruto_centavos: number
+  liquido_centavos: number
+  qtd: number
+}
+export interface ResumoCategoriaSaida {
+  categoria_id: number | null
+  categoria_nome: string | null
+  total_centavos: number
+  qtd: number
+}
+export interface MovimentoBalanco {
+  kind: 'entrada' | 'saida' | 'transferencia'
+  id: number
+  data: string
+  forma: Forma | null
+  valor_centavos: number
+  liquido_centavos: number | null
+  rotulo: string | null
+  detalhe: string | null
+  paciente_nome: string | null
+  grupo_id: number | null
+  origem_id: number | null
+  destino_id: number | null
+}
+export interface ResumoTransferencia {
+  origem_id: number | null
+  origem_nome: string
+  destino_id: number | null
+  destino_nome: string
+  qtd: number
+  total_centavos: number
+}
 export interface Balanco {
   de: string
   ate: string
   por_forma: ResumoForma[]
+  por_tipo_entrada: ResumoTipoEntrada[]
+  por_categoria_saida: ResumoCategoriaSaida[]
+  transferencias: ResumoTransferencia[]
+  movimentos: MovimentoBalanco[]
   total: BalancoTotal
 }
 export const balancoApi = {
@@ -396,13 +485,14 @@ export const balancoApi = {
 }
 
 // ---- Usuários (administração) -------------------------------------
-export type Perfil = 'gestor' | 'operador'
+export type Perfil = 'gestor' | 'operador' | 'profissional'
 
 export interface UsuarioAdmin {
   id: number
   login: string
   nome: string
   perfil: Perfil
+  permissoes: string[]
   ativo: boolean
   ultimo_acesso: string | null
   criado_em: string
@@ -411,13 +501,14 @@ export interface NovoUsuario {
   login: string
   nome: string
   perfil: Perfil
+  permissoes?: string[]
   senha: string
 }
 export const usuariosApi = {
   listar: () => req<{ usuarios: UsuarioAdmin[] }>('/usuarios'),
   criar: (dados: NovoUsuario) =>
     req<{ usuario: UsuarioAdmin }>('/usuarios', { method: 'POST', body: JSON.stringify(dados) }),
-  atualizar: (id: number, dados: Partial<{ nome: string; perfil: Perfil; ativo: boolean }>) =>
+  atualizar: (id: number, dados: Partial<{ nome: string; perfil: Perfil; permissoes: string[]; ativo: boolean }>) =>
     req<{ usuario: UsuarioAdmin }>(`/usuarios/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }),
   senha: (id: number, senha: string) =>
     req<{ ok: boolean }>(`/usuarios/${id}/senha`, { method: 'PATCH', body: JSON.stringify({ senha }) }),
