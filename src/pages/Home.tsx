@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import Lenis from 'lenis'
+import 'lenis/dist/lenis.css'
 import Navbar from '../components/Navbar'
 import childrenGif from '../assets/children.gif'
 import logoLoader from '../assets/logoloading.svg'
@@ -15,40 +17,92 @@ export default function Home() {
     const timer = setTimeout(() => setIsLoading(false), 2000)
 
     const de = document.documentElement
-    const prevSnap = de.style.scrollSnapType
     const prevBehavior = de.style.scrollBehavior
-    de.style.scrollSnapType = 'y proximity'
-    de.style.scrollBehavior = 'smooth'
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
-    window.scrollTo(0, 0)
 
     const container = document.querySelector('main')
-    const secoes = container ? Array.from(container.querySelectorAll<HTMLElement>('[data-tone]')) : []
+    const secoes = container
+      ? Array.from(container.querySelectorAll<HTMLElement>('[data-tone]'))
+      : []
 
+    // Tom do header: definido pela seção que está sob a linha do header.
+    // Chamada direta no scroll (sem requestAnimationFrame) para não depender
+    // de repaint — funciona mesmo com o IntersectionObserver throttled.
+    const LINHA = 40 // altura aproximada do header
+    const atualizarTom = () => {
+      for (const s of secoes) {
+        const r = s.getBoundingClientRect()
+        if (r.top <= LINHA && r.bottom > LINHA) {
+          const t = s.dataset.tone
+          if (t === 'light' || t === 'dark') setTone(t)
+          break
+        }
+      }
+    }
+
+    // Revelação do texto da 2ª seção (proxima): cada palavra sai de
+    // desfocada+apagada -> nítida+cheia conforme a seção sobe pela viewport.
+    const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
+    const proxima = secoes.find((s) => s.querySelector('[data-palavra]'))
+    const palavras = proxima
+      ? Array.from(proxima.querySelectorAll<HTMLElement>('[data-palavra]'))
+      : []
+    const revelarTexto = () => {
+      if (!proxima || palavras.length === 0) return
+      const vh = window.innerHeight
+      const inicio = vh * 0.85 // começa a revelar quando o topo entra a 85% da tela
+      const fim = vh * 0.28 // termina quando o topo chega a 28% da tela
+      const top = proxima.getBoundingClientRect().top
+      const p = clamp((inicio - top) / (inicio - fim), 0, 1)
+      const n = Math.round(p * palavras.length)
+      palavras.forEach((w, i) => {
+        const on = i < n
+        w.style.opacity = on ? '1' : ''
+        w.style.filter = on ? 'blur(0px)' : ''
+      })
+    }
+
+    const atualizar = () => {
+      atualizarTom()
+      revelarTexto()
+    }
+
+    // Abre sempre no hero (sem restauração de scroll do navegador).
+    de.style.scrollBehavior = 'auto'
+    window.scrollTo(0, 0)
+    atualizar()
+
+    // Scroll suave (inércia) para valorizar os efeitos ligados ao rolar.
+    // O Lenis dispara 'scroll' a cada frame -> atualiza tom + revelação do texto.
+    const lenis = new Lenis({ duration: 1.2, smoothWheel: true, touchMultiplier: 1.5 })
+    lenis.on('scroll', atualizar)
+    let rafId = 0
+    const raf = (time: number) => {
+      lenis.raf(time)
+      rafId = requestAnimationFrame(raf)
+    }
+    rafId = requestAnimationFrame(raf)
+
+    // Escadinha/blocos: mantém o observer (ativa quando a seção dark entra)
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
-          if (e.isIntersecting) {
-            const t = (e.target as HTMLElement).dataset.tone
-            if (t === 'light' || t === 'dark') setTone(t)
-
-            // Ativa os blocos quando a tela 2 (dark) entra
-            if (t === 'dark') setIsSectionVisible(true)
-          } else {
-            // Opcional: reseta ao sair
-            const t = (e.target as HTMLElement).dataset.tone
-            if (t === 'dark') setIsSectionVisible(false)
-          }
+          const t = (e.target as HTMLElement).dataset.tone
+          if (t === 'dark') setIsSectionVisible(e.isIntersecting)
         }
       },
       { rootMargin: '-20% 0px -20% 0px', threshold: 0 },
     )
     secoes.forEach((s) => io.observe(s))
 
+    window.addEventListener('scroll', atualizar, { passive: true })
+
     return () => {
       clearTimeout(timer)
+      cancelAnimationFrame(rafId)
+      lenis.destroy()
       io.disconnect()
-      de.style.scrollSnapType = prevSnap
+      window.removeEventListener('scroll', atualizar)
       de.style.scrollBehavior = prevBehavior
       if ('scrollRestoration' in history) history.scrollRestoration = 'auto'
     }
@@ -139,7 +193,13 @@ export default function Home() {
           <div className={styles.proximaInner}>
             <span className={styles.proximaTag}>clinleste</span>
             <h2 className={styles.proximaTitulo}>
-              Saúde mental além dos medicamentos. Tratamentos com abordagem terapêutica em Neuromodulação.
+              {'Saúde mental além dos medicamentos. Tratamentos com abordagem terapêutica em Neuromodulação.'
+                .split(' ')
+                .map((palavra, i) => (
+                  <span key={i} className={styles.palavra} data-palavra>
+                    {palavra}
+                  </span>
+                ))}
             </h2>
             <p className={styles.proximaTexto}></p>
           </div>

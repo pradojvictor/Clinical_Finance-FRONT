@@ -378,14 +378,13 @@
   font-size: clamp(5rem, 10vw, 15rem); 
   font-weight: 900;
   text-transform: uppercase;
-  line-height: 0.85; 
-  letter-spacing: -0.04em; 
-  color: #ffffff; 
-  mix-blend-mode: difference;
-  margin-bottom: 0rem; 
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  color: #161b52;
+  margin-bottom: 0rem;
 
   /* O ESTADO INICIAL (escondido e um pouco mais baixo que o destino) */
-  margin-top: calc(var(--ajuste-vertical) + 50px); 
+  margin-top: calc(var(--ajuste-vertical) + 50px);
   opacity: 0;
   
   /* A ANIMAÇÃO */
@@ -558,6 +557,16 @@ position: absolute;
   color: #161b52;
   letter-spacing: -0.01em;
 }
+/* Revelação palavra-a-palavra ao rolar (estado inicial: desfocada+apagada).
+   O JS remove opacity/filter inline conforme o progresso da seção. */
+.palavra {
+  display: inline-block;
+  margin-right: 0.28em;
+  opacity: 0.14;
+  filter: blur(6px);
+  transition: opacity 0.5s ease, filter 0.5s ease;
+  will-change: opacity, filter;
+}
 .proximaTexto {
   margin-top: var(--sp-4);
   font-size: var(--fs-lg);
@@ -610,16 +619,31 @@ position: absolute;
   backdrop-filter:inherit;
   -webkit-backdrop-filter: blur(10px);
   font-weight: 900;
-  /* text-transform: uppercase; */
   line-height: 0.85; 
   letter-spacing: -0.04em; 
   margin-bottom: 0rem; 
 }
 .herosp{
   text-align: center;
-  color: white;
+  color: #161b52;
   font-size: clamp(1.125rem, 2vw, 1.5rem);
   font-weight: 400;
   letter-spacing: 0.02em;
   max-width: 600px;
+}
+
+/* Wrappers de conteúdo das seções placeholder (serviços, procedimentos,
+   profissionais, mídia). Estilo provisório só para não ficarem sem classe —
+   serão substituídos quando cada seção for construída. */
+.serviceInner,
+.procedimentosInner,
+.profissionaisInner,
+.midiaInner {
+  max-width: 46rem;
+  padding: 0 var(--sp-6);
+  text-align: center;
+  font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.4;
+  color: #161b52;
 }
