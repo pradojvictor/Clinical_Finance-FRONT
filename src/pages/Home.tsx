@@ -77,8 +77,8 @@ export default function Home() {
         </div>
       </div> */}
 
-<div className={`${styles.preloader} ${!isLoading ? styles.preloaderHidden : ''}`}>
-        
+      <div className={`${styles.preloader} ${!isLoading ? styles.preloaderHidden : ''}`}>
+
         {/* 👇 1. BLOCOS PRIMEIRO: Ficam no fundo da tela */}
         <div className={styles.preloaderBlocks}>
           <div className={styles.pBlock}></div>
@@ -101,7 +101,7 @@ export default function Home() {
 
 
 
-      
+
 
       <div className={`${styles.navWrapper} ${!isLoading ? styles.loadedNav : ''}`}>
         <Navbar landing tone={tone} />
@@ -117,6 +117,7 @@ export default function Home() {
                 <span key={index} style={{ transitionDelay: `${0.7 + (index * 0.08)}s` }}>{char}</span>
               ))}
             </h1>
+            
             <p className={styles.heroSub}>Cuidado que acolhe, saúde que transforma.</p>
           </div>
           <div className={`${styles.scrollCue} ${!isLoading ? styles.loadedScroll : ''}`} aria-hidden>
@@ -141,6 +142,32 @@ export default function Home() {
               Saúde mental além dos medicamentos. Tratamentos com abordagem terapêutica em Neuromodulação.
             </h2>
             <p className={styles.proximaTexto}></p>
+          </div>
+        </section>
+        <section className={styles.service} data-tone="dark">
+          <div className={styles.serviceInner}>
+            aqui vamos definir os serviços!!
+          </div>
+        </section>
+
+        <section className={styles.procedimentos} data-tone="dark">
+          <div className={styles.procedimentosInner}>
+            aqui vamos apresentar os procedimentos!!
+            zoom em cada um saindo da esquerda pra o fundo!
+          </div>
+        </section>
+
+        <section className={styles.profissionais} data-tone="dark">
+          <div className={styles.profissionaisInner}>
+            aqui vamos apresentar os profissionais!!
+            cads estilo carroseu
+          </div>
+        </section>
+
+        <section className={styles.midia} data-tone="dark">
+          <div className={styles.midiaInner}>
+            <h2 className={styles.heros}>Clinleste</h2>
+            <p className={styles.herosp}>aqui vamos apresentar a mídia!! quadros com informaçoes uteis e videos do instagran!</p>
           </div>
         </section>
       </main>
