@@ -317,12 +317,73 @@
   z-index: 1000;
   opacity: 0;
   transform: translateY(-20px);
-  transition: opacity 1s ease, transform 1s ease;
+  transition: opacity 1s ease, transform 1s ease,
+    top 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .loadedNav {
   opacity: 1;
   transform: translateY(0);
   transition-delay: 1.2s; /* Entra depois dos blocos */
+}
+/* Na 1ª tela o menu desce para dar lugar ao letreiro de localização. */
+.navComLetreiro {
+  top: 2.25rem;
+}
+
+/* ===================================================================== */
+/* 👇 LETREIRO DE LOCALIZAÇÃO (só na 1ª tela) 👇 */
+/* ===================================================================== */
+.letreiro {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.25rem;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  color: #ffffff;
+  background: linear-gradient(180deg, rgba(22, 27, 82, 0.4), rgba(22, 27, 82, 0));
+  /* Estado escondido (fora do hero) */
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+}
+.letreiroVisivel {
+  transform: translateY(0);
+  opacity: 1;
+}
+.letreiroTrack {
+  flex: none;
+  white-space: nowrap;
+  padding-left: 100%; /* começa fora da tela, à direita */
+  animation: letreiroScroll 20s linear infinite;
+  animation-delay: -10s; /* já entra visível (meio da tela) */
+  will-change: transform;
+}
+.letreiroItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.92);
+}
+.letreiroPin {
+  flex: none;
+  color: rgba(255, 255, 255, 0.92);
+}
+/* Um único texto: entra pela direita, cruza e sai pela esquerda, em loop. */
+@keyframes letreiroScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
 }
 
 
@@ -574,14 +635,223 @@ position: absolute;
   line-height: 1.6;
 }
 
-/*pagina de servoços*/
-.service{
+/* ===================================================================== */
+/* 👇 SEÇÃO DE SERVIÇOS — sequência com scroll-pin 👇 */
+/* ===================================================================== */
+.service {
+  position: relative;
   width: 100%;
+  height: 700vh; /* 6 serviços + visão geral */
+  background: linear-gradient(180deg, #ffffff 0%, #e9f1fb 55%, #dce8f7 100%);
+}
+.serviceSticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
   height: 100dvh;
-  min-height: 100dvh;
-  scroll-snap-align: start;
+  overflow: hidden;
   display: grid;
   place-items: center;
+}
+
+/* Logo ao fundo (recua durante o scroll) */
+.serviceLogo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(70vw, 40rem);
+  height: auto;
+  transform: translate(-50%, -50%) scale(1.6);
+  opacity: 0.36;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Vidro fosco leve sobre o logo (deixa o logo visível) */
+.serviceGlass {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    radial-gradient(60% 55% at 22% 12%, rgba(144, 189, 228, 0.16), transparent 70%),
+    radial-gradient(55% 55% at 88% 92%, rgba(22, 27, 82, 0.05), transparent 72%),
+    rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(13px) saturate(1.1);
+  -webkit-backdrop-filter: blur(13px) saturate(1.1);
+}
+
+/* Palco dos textos (empilhados no centro) */
+.serviceStage {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+.serviceItem {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(90vw, 44rem);
+  transform: translate(-50%, -50%) translateX(-72px) scale(0.72);
+  opacity: 0;
+  text-align: center;
+  will-change: transform, opacity, filter;
+  /* Suavidade extra: os valores dirigidos pelo scroll assentam com easing. */
+  transition: opacity 0.3s ease-out,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.3s ease-out;
+}
+.serviceNum {
+  display: block;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: #6fa2cf;
+  margin-bottom: 1rem;
+}
+.serviceNome {
+  font-size: clamp(2.5rem, 7vw, 5.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: #161b52;
+}
+.serviceTexto {
+  margin: 1.25rem auto 0;
+  max-width: 34rem;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  line-height: 1.5;
+  color: #3a4166;
+}
+
+/* Visão geral: cards lado a lado */
+.serviceOverview {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 0 var(--sp-6);
+  opacity: 0;
+  pointer-events: none;
+}
+.overviewTitulo {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #161b52;
+}
+.serviceCards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  width: min(100%, 66rem);
+}
+.serviceCard {
+  --enter: 42px; /* deslocamento de entrada (o JS atualiza pelo scroll) */
+  padding: 1.5rem;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.14));
+  border: 0.0625rem solid rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(7px) saturate(1.3);
+  -webkit-backdrop-filter: blur(7px) saturate(1.3);
+  box-shadow:
+    0 1.5rem 2.75rem -1.125rem rgba(22, 27, 82, 0.45),
+    inset 0 0.0625rem 0 rgba(255, 255, 255, 0.75);
+  opacity: 0;
+  transform: translateY(var(--enter));
+  will-change: transform, opacity;
+  /* flutuação contínua e suave */
+  animation: flutuarCard 6s ease-in-out infinite;
+}
+.serviceCard:nth-child(2) { animation-delay: -1s; }
+.serviceCard:nth-child(3) { animation-delay: -2.4s; }
+.serviceCard:nth-child(4) { animation-delay: -3.1s; }
+.serviceCard:nth-child(5) { animation-delay: -4.3s; }
+.serviceCard:nth-child(6) { animation-delay: -0.6s; }
+
+/* Flutua em torno da posição de entrada (var --enter, dirigida pelo scroll). */
+@keyframes flutuarCard {
+  0%,
+  100% {
+    transform: translateY(var(--enter));
+  }
+  50% {
+    transform: translateY(calc(var(--enter) - 0.625rem));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .serviceCard {
+    animation: none;
+    transform: translateY(var(--enter));
+  }
+}
+.cardNum {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #6fa2cf;
+}
+.cardNome {
+  margin-top: 0.4rem;
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: #161b52;
+}
+.cardTexto {
+  margin-top: 0.5rem;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: #3a4166;
+}
+
+/* Barra de progresso */
+.serviceProgress {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(1.5rem, 5vh, 3rem);
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: min(80vw, 22rem);
+}
+.progressCounter {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #161b52;
+  font-variant-numeric: tabular-nums;
+}
+.progressTrack {
+  width: 100%;
+  height: 0.1875rem;
+  border-radius: 0.1875rem;
+  background: rgba(22, 27, 82, 0.15);
+  overflow: hidden;
+}
+.progressFill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.1875rem;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: linear-gradient(90deg, #90bde4, #161b52);
+}
+
+@media (max-width: 48rem) {
+  .serviceCards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  .serviceCard {
+    padding: 1rem;
+  }
 }
 
 .procedimentos{
