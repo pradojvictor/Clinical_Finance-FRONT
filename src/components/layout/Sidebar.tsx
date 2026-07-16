@@ -11,10 +11,10 @@ export default function Sidebar() {
   const [aberto, setAberto] = useState(false)
   const railRef = useRef<HTMLDivElement>(null)
 
-  // Só mostra as páginas permitidas ao perfil do usuário (cliente não usa o trilho).
+  // Só mostra as páginas permitidas ao perfil do usuário.
   // Profissional: só leitura; Início sempre + as seções liberadas pelo gestor.
   const itens = NAV_ITEMS.filter((item) => {
-    if (user === null || user.perfil === 'cliente') return false
+    if (user === null) return false
     if (user.perfil === 'profissional') {
       return item.to === '/sistema' || (item.secao != null && (user.permissoes ?? []).includes(item.secao))
     }

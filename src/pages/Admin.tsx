@@ -1017,24 +1017,21 @@ function TaxasPanel() {
 }
 
 /* ---- Registros (auditoria legível) -------------------------------- */
-type CategoriaLog = 'dinheiro' | 'clientes' | 'profissionais' | 'outros'
+type CategoriaLog = 'dinheiro' | 'profissionais' | 'outros'
 
 const CAT_LABEL: Record<CategoriaLog, string> = {
   dinheiro: 'Dinheiro',
-  clientes: 'Clientes',
   profissionais: 'Profissionais',
   outros: 'Outros',
 }
 const CAT_TONE: Record<CategoriaLog, BadgeTone> = {
   dinheiro: 'success',
-  clientes: 'blue',
   profissionais: 'warning',
   outros: 'neutral',
 }
 const FILTROS: { id: CategoriaLog | 'todos'; label: string }[] = [
   { id: 'todos', label: 'Tudo' },
   { id: 'dinheiro', label: 'Dinheiro' },
-  { id: 'clientes', label: 'Clientes' },
   { id: 'profissionais', label: 'Profissionais' },
   { id: 'outros', label: 'Outros' },
 ]
@@ -1067,10 +1064,6 @@ const TEXTO_ACAO: Record<string, string> = {
   'usuario.editar': 'Editou um profissional',
   'usuario.senha': 'Trocou a senha de um profissional',
   'usuario.desativar': 'Desativou um profissional',
-  'cliente.criar': 'Cadastrou um cliente',
-  'cliente.registro': 'Cliente se cadastrou no site',
-  'cliente.login': 'Cliente entrou',
-  'cliente.logout': 'Cliente saiu',
   login: 'Entrou no sistema',
   'login.falha': 'Tentativa de login falhou',
   logout: 'Saiu do sistema',
@@ -1078,7 +1071,6 @@ const TEXTO_ACAO: Record<string, string> = {
 
 function categoriaDe(acao: string): CategoriaLog {
   if (/^(entrada|saida|transferencia|saldo_inicial|banco|taxa|categoria_saida|tipo_entrada|subtipo_entrada)/.test(acao)) return 'dinheiro'
-  if (acao.startsWith('cliente')) return 'clientes'
   if (acao.startsWith('usuario') || acao === 'login' || acao === 'logout' || acao === 'login.falha') return 'profissionais'
   return 'outros'
 }

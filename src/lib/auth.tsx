@@ -5,6 +5,7 @@
 // =====================================================================
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { authApi, ApiError, type Usuario } from './api'
+import { TEM_SISTEMA } from '../config/alvo'
 
 interface AuthContextValue {
   user: Usuario | null
@@ -20,6 +21,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
+    // Build só-landing não tem API para perguntar: não existe sessão aqui.
+    if (!TEM_SISTEMA) {
+      setCarregando(false)
+      return
+    }
     let vivo = true
     authApi
       .me()

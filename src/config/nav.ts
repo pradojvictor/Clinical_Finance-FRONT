@@ -19,7 +19,6 @@ export type Secao =
   | 'entradas'
   | 'saidas'
   | 'transferencias'
-  | 'clientes'
   | 'procedimentos'
   | 'balanco'
 
@@ -38,7 +37,6 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/sistema/entradas',     label: 'Entradas',      icon: 'entrada', roles: [ROLES.GESTOR, ROLES.OPERADOR], secao: 'entradas' },
   { to: '/sistema/saidas',       label: 'Saídas',        icon: 'saida',   roles: [ROLES.GESTOR], secao: 'saidas' },
   { to: '/sistema/transferencias', label: 'Transferências', icon: 'transfer', roles: [ROLES.GESTOR], secao: 'transferencias' },
-  { to: '/sistema/clientes',     label: 'Clientes',      icon: 'user',    roles: [ROLES.GESTOR, ROLES.OPERADOR], secao: 'clientes' },
   { to: '/sistema/procedimentos', label: 'Procedimentos', icon: 'proc',   roles: [ROLES.GESTOR, ROLES.OPERADOR], secao: 'procedimentos' },
   { to: '/sistema/balanco',      label: 'Balanço',       icon: 'balanco', roles: [ROLES.GESTOR], secao: 'balanco' },
   { to: '/sistema/admin',        label: 'Admin',         icon: 'admin',   roles: [ROLES.GESTOR] },
@@ -49,8 +47,7 @@ export const SECAO_LABEL: Record<Secao, string> = {
   entradas: 'Entradas',
   saidas: 'Saídas',
   transferencias: 'Transferências',
-  clientes: 'Clientes',
   procedimentos: 'Procedimentos',
   balanco: 'Balanço',
 }
-export const SECOES: Secao[] = ['entradas', 'saidas', 'transferencias', 'clientes', 'procedimentos', 'balanco']
+export const SECOES: Secao[] = ['entradas', 'saidas', 'transferencias', 'procedimentos', 'balanco']

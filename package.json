@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:site": "tsc && VITE_ALVO=site vite build --outDir dist-site",
+    "build:sistema": "tsc && VITE_ALVO=sistema vite build --outDir dist-sistema"
   },
   "dependencies": {
     "lenis": "^1.3.25",

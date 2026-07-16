@@ -42,8 +42,8 @@ async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T
 }
 
-/** Perfil do principal logado: staff (gestor/operador) ou cliente do site. */
-export type PerfilUsuario = Role | 'cliente'
+/** Perfil do usuário logado (só equipe: gestor/operador/profissional). */
+export type PerfilUsuario = Role
 
 export interface Usuario {
   login: string
@@ -62,54 +62,6 @@ export const authApi = {
       body: JSON.stringify({ login, senha }),
     }),
   logout: () => req<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
-}
-
-// Site público — registro de cliente (login do cliente vem depois).
-export interface NovoCliente {
-  nome: string
-  email: string
-  senha: string
-  data_nascimento: string
-  cpf?: string
-}
-export interface ClienteDados {
-  nome: string
-  cpf: string | null
-  email: string
-  data_nascimento: string | null
-}
-export interface ClienteLista {
-  id: number
-  nome: string
-  cpf: string | null
-  email: string
-  data_nascimento: string | null
-  criado_em: string
-}
-export const clientesApi = {
-  registro: (dados: NovoCliente) =>
-    req<{ ok: boolean }>('/clientes/registro', {
-      method: 'POST',
-      body: JSON.stringify(dados),
-    }),
-  // Cadastro do cliente pelo operador (dentro do sistema).
-  criar: (dados: NovoCliente) =>
-    req<{ cliente: { id: number; nome: string; email: string } }>('/clientes', {
-      method: 'POST',
-      body: JSON.stringify(dados),
-    }),
-  // Lista de clientes cadastrados (staff), com busca opcional.
-  listar: (q?: string) =>
-    req<{ clientes: ClienteLista[] }>(`/clientes${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-  eu: () => req<{ cliente: ClienteDados }>('/clientes/eu'),
-  atendimentos: () =>
-    req<{ atendimentos: AtendimentoCliente[]; total_centavos: number; tem_cpf: boolean }>('/clientes/atendimentos'),
-}
-export interface AtendimentoCliente {
-  id: number
-  data: string
-  forma: Forma
-  valor_centavos: number
 }
 
 // ---- Admin: bancos e taxas ----------------------------------------
