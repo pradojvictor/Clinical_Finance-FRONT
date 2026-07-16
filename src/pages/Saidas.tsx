@@ -9,6 +9,8 @@ import {
   bancosApi,
   categoriasSaidaApi,
   saidasApi,
+  profissionaisApi,
+  type BaseSalario,
   type Banco,
   type CategoriaSaida,
   type EditarSaida,
@@ -172,6 +174,43 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
+  // Pagamento por porcentagem: o período do cálculo é escolhido na hora.
+  const mesAtual = useMemo(() => {
+    const d = new Date()
+    return periodoMes(d.getFullYear(), d.getMonth() + 1)
+  }, [])
+  const [calcDe, setCalcDe] = useState(mesAtual.de)
+  const [calcAte, setCalcAte] = useState(mesAtual.ate)
+  const [base, setBase] = useState<BaseSalario | null>(null)
+
+  // Profissional escolhido (quando a subcategoria é um funcionário).
+  const profId = useMemo(() => {
+    const sub = cats.find((c) => String(c.id) === subcategoriaId && c.nivel === 'subcategoria')
+    return sub?.profissional_id ?? null
+  }, [cats, subcategoriaId])
+
+  // Ao puxar o profissional, calcula pela % dele no período e preenche o valor.
+  useEffect(() => {
+    if (profId == null) {
+      setBase(null)
+      return
+    }
+    let vivo = true
+    profissionaisApi
+      .base(profId, calcDe, calcAte)
+      .then((r) => {
+        if (!vivo) return
+        setBase(r.base)
+        if (r.base.percentual_bp > 0) setValor((r.base.valor_centavos / 100).toFixed(2).replace('.', ','))
+      })
+      .catch(() => {
+        if (vivo) setBase(null)
+      })
+    return () => {
+      vivo = false
+    }
+  }, [profId, calcDe, calcAte])
+
   useEffect(() => {
     bancosApi.listar().then((r) => setBancos(r.bancos.filter((b) => b.ativo))).catch(() => {})
     categoriasSaidaApi.listar().then((r) => setCats(r.categorias.filter((c) => c.ativo))).catch(() => {})
@@ -192,6 +231,8 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
     () => (categoriaId ? cats.filter((c) => c.nivel === 'subcategoria' && c.parent_id === Number(categoriaId)) : []),
     [cats, categoriaId],
   )
+  // Se as subcategorias da categoria escolhida são funcionários, o rótulo vira "Profissional".
+  const subEhProfissional = subs.some((su) => su.profissional_id != null)
   const temCategorias = cats.some((c) => c.nivel === 'categoria')
 
   const precisaBanco = forma !== '' && forma !== 'especie'
@@ -214,6 +255,8 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
       banco_id: precisaBanco ? Number(bancoId) : null,
       subcategoria_id: subs.length > 0 ? Number(subcategoriaId) : null,
       observacao: observacao.trim() || undefined,
+      // Pagamento de profissional: manda o recorte pro histórico congelar a base.
+      ...(profId != null ? { periodo_de: calcDe, periodo_ate: calcAte } : {}),
     }
     setEnviando(true)
     try {
@@ -262,7 +305,7 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
                   if (f === 'especie') setBancoId('')
                 }}
               >
-                <option value="">Selecione…</option>
+                <option value="">{subEhProfissional ? 'Selecione o profissional' : 'Selecione…'}</option>
                 {FORMAS_SAIDA.map((f) => <option key={f} value={f}>{FORMA_LABEL[f]}</option>)}
               </select>
             </label>
@@ -270,7 +313,7 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
               <label className={e.campo}>
                 <span className={e.label}>Banco de saída</span>
                 <select className={e.input} value={bancoId} onChange={(ev) => setBancoId(ev.target.value)}>
-                  <option value="">Selecione…</option>
+                  <option value="">{subEhProfissional ? 'Selecione o profissional' : 'Selecione…'}</option>
                   {bancos.map((b) => <option key={b.id} value={b.id}>{b.nome}</option>)}
                 </select>
               </label>
@@ -304,12 +347,41 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
 
           {subs.length > 0 && (
             <label className={e.campo}>
-              <span className={e.label}>Subcategoria</span>
+              <span className={e.label}>{subEhProfissional ? 'Profissional' : 'Subcategoria'}</span>
               <select className={e.input} value={subcategoriaId} onChange={(ev) => setSubcategoriaId(ev.target.value)}>
-                <option value="">Selecione…</option>
+                <option value="">{subEhProfissional ? 'Selecione o profissional' : 'Selecione…'}</option>
                 {subs.map((su) => <option key={su.id} value={su.id}>{su.rotulo}</option>)}
               </select>
             </label>
+          )}
+
+          {/* Pagamento por porcentagem: período do cálculo + base (preenche o valor) */}
+          {profId != null && (
+            <>
+              <div className={e.linha2}>
+                <label className={e.campo}>
+                  <span className={e.label}>Calcular de</span>
+                  <input className={e.input} type="date" value={calcDe} onChange={(ev) => setCalcDe(ev.target.value)} />
+                </label>
+                <label className={e.campo}>
+                  <span className={e.label}>até</span>
+                  <input className={e.input} type="date" value={calcAte} onChange={(ev) => setCalcAte(ev.target.value)} />
+                </label>
+              </div>
+              {base && (
+                <div className={e.taxaBox}>
+                  {base.percentual_bp > 0 ? (
+                    <span>
+                      {base.qtd_entradas} entrada(s) · líquido {brl(base.entradas_liquido_centavos)} ×{' '}
+                      {String(base.percentual_bp / 100).replace('.', ',')}% ={' '}
+                      <strong>{brl(base.valor_centavos)}</strong>
+                    </span>
+                  ) : (
+                    <span>Sem porcentagem para {base.profissional_nome} — defina em Admin → Salários.</span>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           <label className={e.campo}>
@@ -364,6 +436,8 @@ function EditarSaidaModal({ saida, onClose, onSalvo }: { saida: SaidaDetalhe; on
     () => (categoriaId ? cats.filter((c) => c.nivel === 'subcategoria' && c.parent_id === Number(categoriaId)) : []),
     [cats, categoriaId],
   )
+  // Se as subcategorias da categoria escolhida são funcionários, o rótulo vira "Profissional".
+  const subEhProfissional = subs.some((su) => su.profissional_id != null)
   const temCategorias = cats.some((c) => c.nivel === 'categoria')
   const precisaBanco = forma !== 'especie'
 
@@ -439,7 +513,7 @@ function EditarSaidaModal({ saida, onClose, onSalvo }: { saida: SaidaDetalhe; on
               <label className={e.campo}>
                 <span className={e.label}>Banco de saída</span>
                 <select className={e.input} value={bancoId} onChange={(ev) => setBancoId(ev.target.value)}>
-                  <option value="">Selecione…</option>
+                  <option value="">{subEhProfissional ? 'Selecione o profissional' : 'Selecione…'}</option>
                   {bancos.map((b) => <option key={b.id} value={b.id}>{b.nome}</option>)}
                 </select>
               </label>
@@ -472,9 +546,9 @@ function EditarSaidaModal({ saida, onClose, onSalvo }: { saida: SaidaDetalhe; on
 
           {subs.length > 0 && (
             <label className={e.campo}>
-              <span className={e.label}>Subcategoria</span>
+              <span className={e.label}>{subEhProfissional ? 'Profissional' : 'Subcategoria'}</span>
               <select className={e.input} value={subcategoriaId} onChange={(ev) => setSubcategoriaId(ev.target.value)}>
-                <option value="">Selecione…</option>
+                <option value="">{subEhProfissional ? 'Selecione o profissional' : 'Selecione…'}</option>
                 {subs.map((su) => <option key={su.id} value={su.id}>{su.rotulo}</option>)}
               </select>
             </label>

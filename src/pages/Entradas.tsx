@@ -360,9 +360,9 @@ function NovaEntradaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: 
           {/* Subcategoria — só quando o tipo escolhido tiver subcategorias */}
           {subtipos.length > 0 && (
             <label className={e.campo}>
-              <span className={e.label}>Subcategoria (opcional)</span>
+              <span className={e.label}>Profissional</span>
               <select className={e.input} value={subtipoId} onChange={(ev) => setSubtipoId(ev.target.value)}>
-                <option value="">Sem subcategoria</option>
+                <option value="">Selecione o profissional</option>
                 {subtipos.map((sub) => (
                   <option key={sub.id} value={sub.id}>{sub.rotulo}</option>
                 ))}
@@ -617,9 +617,9 @@ function EditarEntradaModal({ entrada, onClose, onSalvo }: { entrada: EntradaDet
 
           {(subtipos.length > 0 || subtipoId) && (
             <label className={e.campo}>
-              <span className={e.label}>Subcategoria</span>
+              <span className={e.label}>Profissional</span>
               <select className={e.input} value={subtipoId} onChange={(ev) => setSubtipoId(ev.target.value)}>
-                <option value="">Sem subcategoria</option>
+                <option value="">Selecione o profissional</option>
                 {/* preserva a subcategoria atual mesmo que tenha sido desativada */}
                 {entrada.subtipo_id &&
                   String(entrada.tipo_id) === tipoId &&

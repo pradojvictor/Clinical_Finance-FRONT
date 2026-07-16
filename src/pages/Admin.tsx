@@ -10,13 +10,19 @@ import {
   auditoriaApi,
   bancosApi,
   categoriasSaidaApi,
+  categoriasProfissionalApi,
+  profissionaisApi,
   taxasApi,
   tiposEntradaApi,
   subtiposEntradaApi,
   usuariosApi,
   type Banco,
+  type CategoriaProfissional,
   type CategoriaSaida,
   type Forma,
+  type NovoProfissional,
+  type Profissional,
+  type PagamentoProfissional,
   type NivelCategoriaSaida,
   type NovoUsuario,
   type Perfil,
@@ -27,18 +33,26 @@ import {
   type UsuarioAdmin,
 } from '../lib/api'
 import { SECOES, SECAO_LABEL } from '../config/nav'
-import { brl } from '../lib/format'
+import { brl, dataBR, parseCentavos } from '../lib/format'
 import s from './page.module.css'
 import a from './Admin.module.css'
 import e from './Entradas.module.css'
 
-type Aba = 'usuarios' | 'bancos' | 'taxas' | 'categorias' | 'tipos-entrada' | 'registros'
+type Aba =
+  | 'usuarios'
+  | 'bancos'
+  | 'taxas'
+  | 'categorias'
+  | 'tipos-entrada'
+  | 'profissionais'
+  | 'registros'
 const ABAS: { id: Aba; label: string }[] = [
   { id: 'usuarios', label: 'Usuários' },
   { id: 'bancos', label: 'Bancos' },
   { id: 'taxas', label: 'Taxas' },
   { id: 'categorias', label: 'Categorias de saída' },
   { id: 'tipos-entrada', label: 'Categorias de entrada' },
+  { id: 'profissionais', label: 'Registro de profissional' },
   { id: 'registros', label: 'Registros' },
 ]
 
@@ -77,6 +91,7 @@ export default function Admin() {
       {aba === 'taxas' && <TaxasPanel />}
       {aba === 'categorias' && <CategoriasSaidaPanel />}
       {aba === 'tipos-entrada' && <TiposEntradaPanel />}
+      {aba === 'profissionais' && <RegistroProfissionalPanel />}
       {aba === 'registros' && <AuditoriaPanel />}
     </div>
   )
@@ -307,7 +322,7 @@ function SubtiposDeTipo({
   const [nome, setNome] = useState('')
   const [salvando, setSalvando] = useState(false)
 
-  const jaUsados = new Set(subtipos.filter((x) => x.usuario_id).map((x) => x.usuario_id))
+  const jaUsados = new Set(subtipos.filter((x) => x.profissional_id).map((x) => x.profissional_id))
   const disponiveis = usuarios.filter((u) => !jaUsados.has(u.id))
 
   const adicionar = async (e: FormEvent) => {
@@ -317,7 +332,7 @@ function SubtiposDeTipo({
     try {
       if (kind === 'profissional') {
         if (!usuarioId) return
-        await subtiposEntradaApi.criar({ tipo_id: tipoId, usuario_id: Number(usuarioId) })
+        await subtiposEntradaApi.criar({ tipo_id: tipoId, profissional_id: Number(usuarioId) })
         setUsuarioId('')
       } else {
         if (!nome.trim()) return
@@ -358,7 +373,7 @@ function SubtiposDeTipo({
       {subtipos.map((sub) => (
         <div key={sub.id} className={a.subItem}>
           <span className={a.subNome}>{sub.rotulo}</span>
-          <Badge tone="neutral">{sub.usuario_id ? 'profissional' : 'outro'}</Badge>
+          <Badge tone="neutral">{sub.profissional_id ? 'profissional' : 'outro'}</Badge>
           {!sub.ativo && <Badge tone="neutral">inativo</Badge>}
           <span className={a.acoesCat}>
             <button type="button" className={a.linkBtn} onClick={() => toggle(sub)}>
@@ -401,6 +416,514 @@ function SubtiposDeTipo({
         </button>
       </form>
     </div>
+  )
+}
+
+/* ---- Registro de profissional (categorias + fichas) --------------- */
+/** "12,5" -> 1250 pontos-base. null se inválido/vazio. */
+function pctParaBp(v: string): number | null {
+  const n = Number(v.replace(',', '.'))
+  if (!v.trim() || !Number.isFinite(n) || n < 0 || n > 100) return null
+  return Math.round(n * 100)
+}
+const fmtCpf = (c: string | null) =>
+  c && c.length === 11 ? `${c.slice(0, 3)}.${c.slice(3, 6)}.${c.slice(6, 9)}-${c.slice(9)}` : (c ?? '—')
+
+function RegistroProfissionalPanel() {
+  const [cats, setCats] = useState<CategoriaProfissional[]>([])
+  const [fichas, setFichas] = useState<Profissional[] | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [modal, setModal] = useState<{ ficha?: Profissional } | null>(null)
+
+  const carregar = () => {
+    categoriasProfissionalApi.listar().then((r) => setCats(r.categorias)).catch(() => {})
+    profissionaisApi.listar().then((r) => setFichas(r.profissionais)).catch((x) => setErro(msg(x)))
+  }
+  useEffect(carregar, [])
+
+  return (
+    <div className={s.stack}>
+      <CategoriasProfissionalCard cats={cats} onErro={setErro} onChange={carregar} />
+
+      <Card
+        title="Profissionais"
+        action={
+          <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={() => setModal({})}>
+            <Icon name="user" size={16} /> Novo profissional
+          </button>
+        }
+      >
+        {erro && <div className={a.erro}>{erro}</div>}
+
+        {fichas === null ? (
+          <div className={a.carregando}>Carregando…</div>
+        ) : fichas.length === 0 ? (
+          <p className={a.nota}>Nenhum profissional cadastrado.</p>
+        ) : (
+          <div className={a.arvore}>
+            {fichas.map((f) => (
+              <FichaProfissional
+                key={f.id}
+                ficha={f}
+                onEditar={() => setModal({ ficha: f })}
+                onErro={setErro}
+                onChange={carregar}
+              />
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {modal && (
+        <ProfissionalModal
+          ficha={modal.ficha}
+          cats={cats}
+          onClose={() => setModal(null)}
+          onSalvo={() => {
+            setModal(null)
+            carregar()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function CategoriasProfissionalCard({
+  cats,
+  onErro,
+  onChange,
+}: {
+  cats: CategoriaProfissional[]
+  onErro: (m: string | null) => void
+  onChange: () => void
+}) {
+  const [novo, setNovo] = useState('')
+  const [salvando, setSalvando] = useState(false)
+
+  const adicionar = async (ev: FormEvent) => {
+    ev.preventDefault()
+    if (!novo.trim()) return
+    setSalvando(true)
+    onErro(null)
+    try {
+      await categoriasProfissionalApi.criar(novo.trim())
+      setNovo('')
+      onChange()
+    } catch (x) {
+      onErro(msg(x))
+    } finally {
+      setSalvando(false)
+    }
+  }
+  const toggle = async (c: CategoriaProfissional) => {
+    onErro(null)
+    try {
+      await categoriasProfissionalApi.atualizar(c.id, { ativo: !c.ativo })
+      onChange()
+    } catch (x) {
+      onErro(msg(x))
+    }
+  }
+  const excluir = async (c: CategoriaProfissional) => {
+    if (!window.confirm(`Excluir a categoria "${c.nome}"?`)) return
+    onErro(null)
+    try {
+      await categoriasProfissionalApi.excluir(c.id)
+      onChange()
+    } catch (x) {
+      onErro(msg(x))
+    }
+  }
+
+  return (
+    <Card title="Categorias de profissional" action={<Badge tone="neutral">{cats.length}</Badge>}>
+      <form className={a.addRow} onSubmit={adicionar}>
+        <input
+          className={s.input}
+          value={novo}
+          onChange={(e) => setNovo(e.target.value)}
+          placeholder="ex.: Psiquiatra, Psicólogo, Fisioterapeuta…"
+          maxLength={80}
+        />
+        <button type="submit" className={`${s.btn} ${s.btnPrimary}`} disabled={salvando}>
+          <Icon name="entrada" size={16} /> Adicionar
+        </button>
+      </form>
+      {cats.length === 0 ? (
+        <p className={a.nota}>Nenhuma categoria ainda.</p>
+      ) : (
+        <ul className={a.lista}>
+          {cats.map((c) => (
+            <li key={c.id} className={a.item}>
+              <span className={a.itemNome}>{c.nome}</span>
+              <Badge tone={c.ativo ? 'success' : 'neutral'}>{c.ativo ? 'ativo' : 'inativo'}</Badge>
+              <button type="button" className={a.linkBtn} onClick={() => toggle(c)}>
+                {c.ativo ? 'Desativar' : 'Ativar'}
+              </button>
+              <button type="button" className={a.linkDanger} onClick={() => excluir(c)}>
+                Excluir
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  )
+}
+
+function FichaProfissional({
+  ficha,
+  onEditar,
+  onErro,
+  onChange,
+}: {
+  ficha: Profissional
+  onEditar: () => void
+  onErro: (m: string | null) => void
+  onChange: () => void
+}) {
+  const [valeNome, setValeNome] = useState('')
+  const [valeTipo, setValeTipo] = useState<'percentual' | 'valor'>('valor')
+  const [valeVal, setValeVal] = useState('')
+  // Histórico de salários recebidos (carrega sob demanda).
+  const [hist, setHist] = useState<PagamentoProfissional[] | null>(null)
+  const [verHist, setVerHist] = useState(false)
+
+  const abrirHist = () => {
+    const novo = !verHist
+    setVerHist(novo)
+    if (novo && hist === null) {
+      profissionaisApi
+        .pagamentos(ficha.id)
+        .then((r) => setHist(r.pagamentos))
+        .catch(() => setHist([]))
+    }
+  }
+
+  const addVale = async (ev: FormEvent) => {
+    ev.preventDefault()
+    onErro(null)
+    if (!valeNome.trim()) return
+    try {
+      if (valeTipo === 'percentual') {
+        const bp = pctParaBp(valeVal)
+        if (bp == null) return onErro('Porcentagem do vale deve ficar entre 0 e 100.')
+        await profissionaisApi.criarVale({ profissional_id: ficha.id, nome: valeNome.trim(), percentual_bp: bp })
+      } else {
+        const c = parseCentavos(valeVal)
+        if (c <= 0) return onErro('Informe um valor válido para o vale.')
+        await profissionaisApi.criarVale({ profissional_id: ficha.id, nome: valeNome.trim(), valor_centavos: c })
+      }
+      setValeNome('')
+      setValeVal('')
+      onChange()
+    } catch (x) {
+      onErro(msg(x))
+    }
+  }
+  const delVale = async (id: number) => {
+    onErro(null)
+    try {
+      await profissionaisApi.excluirVale(id)
+      onChange()
+    } catch (x) {
+      onErro(msg(x))
+    }
+  }
+  const toggle = async () => {
+    onErro(null)
+    try {
+      await profissionaisApi.atualizar(ficha.id, { ativo: !ficha.ativo })
+      onChange()
+    } catch (x) {
+      onErro(msg(x))
+    }
+  }
+  const excluir = async () => {
+    if (!window.confirm(`Excluir a ficha de ${ficha.nome}?`)) return
+    onErro(null)
+    try {
+      await profissionaisApi.excluir(ficha.id)
+      onChange()
+    } catch (x) {
+      onErro(msg(x))
+    }
+  }
+
+  const remuneracao =
+    ficha.percentual_bp != null
+      ? `${fmtPct(ficha.percentual_bp)}% das entradas`
+      : ficha.salario_centavos != null
+        ? `${brl(ficha.salario_centavos)} / mês`
+        : 'sem remuneração definida'
+
+  return (
+    <div className={a.central}>
+      <div className={a.centralHead}>
+        <span className={a.centralNome}>{ficha.nome}</span>
+        {ficha.categoria_nome && <Badge tone="blue">{ficha.categoria_nome}</Badge>}
+        <Badge tone={ficha.percentual_bp != null ? 'success' : 'neutral'}>{remuneracao}</Badge>
+        {!ficha.ativo && <Badge tone="neutral">inativo</Badge>}
+        <span className={a.acoesCat}>
+          <button type="button" className={a.linkBtn} onClick={onEditar}>Editar</button>
+          <button type="button" className={a.linkBtn} onClick={toggle}>
+            {ficha.ativo ? 'Desativar' : 'Ativar'}
+          </button>
+          <button type="button" className={a.linkDanger} onClick={excluir}>Excluir</button>
+        </span>
+      </div>
+
+      <div className={a.catBloco}>
+        <p className={a.hint}>
+          CPF: {fmtCpf(ficha.cpf)}
+          {ficha.endereco ? ` · ${ficha.endereco}` : ''}
+          {ficha.beneficios ? ` · Benefícios: ${ficha.beneficios}` : ''}
+        </p>
+
+        {ficha.vales.map((v) => (
+          <div key={v.id} className={a.subItem}>
+            <span className={a.subNome}>{v.nome}</span>
+            <Badge tone="neutral">
+              {v.percentual_bp != null ? `${fmtPct(v.percentual_bp)}% do salário` : brl(v.valor_centavos ?? 0)}
+            </Badge>
+            <span className={a.acoesCat}>
+              <button type="button" className={a.linkDanger} onClick={() => delVale(v.id)}>Excluir</button>
+            </span>
+          </div>
+        ))}
+
+        <form className={a.addInline} onSubmit={addVale}>
+          <input
+            className={a.addInput}
+            style={{ maxWidth: '12rem' }}
+            value={valeNome}
+            onChange={(e) => setValeNome(e.target.value)}
+            placeholder="Vale/auxílio (ex.: VR)"
+            maxLength={80}
+          />
+          <select
+            className={a.addInput}
+            style={{ maxWidth: '8rem' }}
+            value={valeTipo}
+            onChange={(e) => setValeTipo(e.target.value as 'percentual' | 'valor')}
+          >
+            <option value="valor">Valor</option>
+            <option value="percentual">% do salário</option>
+          </select>
+          <input
+            className={a.addInput}
+            style={{ maxWidth: '7rem' }}
+            value={valeVal}
+            onChange={(e) => setValeVal(e.target.value)}
+            placeholder={valeTipo === 'percentual' ? '0,00 %' : 'R$ 0,00'}
+            inputMode="decimal"
+          />
+          <button type="submit" className={a.miniBtn}>Adicionar</button>
+        </form>
+
+        {/* Histórico de salários recebidos (vem das saídas registradas) */}
+        <button type="button" className={a.addCat} onClick={abrirHist}>
+          {verHist ? 'Ocultar histórico de salários' : 'Ver histórico de salários'}
+        </button>
+        {verHist &&
+          (hist === null ? (
+            <p className={a.hint}>Carregando…</p>
+          ) : hist.length === 0 ? (
+            <p className={a.hint}>Nenhum salário pago ainda.</p>
+          ) : (
+            hist.map((p) => (
+              <div key={p.id} className={a.subItem}>
+                <span className={a.subNome}>{dataBR(p.data)}</span>
+                <strong>{brl(p.valor_centavos)}</strong>
+                {p.percentual_bp != null && p.base_liquido_centavos != null && (
+                  <Badge tone="neutral">
+                    {fmtPct(p.percentual_bp)}% de {brl(p.base_liquido_centavos)}
+                    {p.periodo_de && p.periodo_ate ? ` · ${dataBR(p.periodo_de)}–${dataBR(p.periodo_ate)}` : ''}
+                  </Badge>
+                )}
+              </div>
+            ))
+          ))}
+      </div>
+    </div>
+  )
+}
+
+/* Modal: nova/editar ficha do profissional. */
+function ProfissionalModal({
+  ficha,
+  cats,
+  onClose,
+  onSalvo,
+}: {
+  ficha?: Profissional
+  cats: CategoriaProfissional[]
+  onClose: () => void
+  onSalvo: () => void
+}) {
+  const editando = !!ficha
+  const [nome, setNome] = useState(ficha?.nome ?? '')
+  const [cpf, setCpf] = useState(ficha?.cpf ?? '')
+  const [categoriaId, setCategoriaId] = useState(ficha?.categoria_id ? String(ficha.categoria_id) : '')
+  const [modo, setModo] = useState<'salario' | 'percentual'>(
+    ficha?.percentual_bp != null ? 'percentual' : 'salario',
+  )
+  const [salario, setSalario] = useState(
+    ficha?.salario_centavos != null ? (ficha.salario_centavos / 100).toFixed(2).replace('.', ',') : '',
+  )
+  const [pct, setPct] = useState(ficha?.percentual_bp != null ? fmtPct(ficha.percentual_bp) : '')
+  const [endereco, setEndereco] = useState(ficha?.endereco ?? '')
+  const [beneficios, setBeneficios] = useState(ficha?.beneficios ?? '')
+  const [erro, setErro] = useState<string | null>(null)
+  const [enviando, setEnviando] = useState(false)
+
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
+
+  const onSubmit = async (ev: FormEvent) => {
+    ev.preventDefault()
+    setErro(null)
+    if (nome.trim().length < 2) return setErro('Informe o nome completo.')
+    const digitos = cpf.replace(/\D/g, '')
+    if (digitos && digitos.length !== 11) return setErro('O CPF deve ter 11 dígitos.')
+
+    // Remuneração: salário fixo OU % das entradas — quando é %, o salário fica vazio.
+    const dados: NovoProfissional = {
+      nome: nome.trim(),
+      cpf: digitos || null,
+      categoria_id: categoriaId ? Number(categoriaId) : null,
+      endereco: endereco.trim() || null,
+      beneficios: beneficios.trim() || null,
+    }
+    if (modo === 'percentual') {
+      const bp = pctParaBp(pct)
+      if (bp == null) return setErro('Informe uma porcentagem entre 0 e 100.')
+      dados.percentual_bp = bp
+    } else if (salario.trim()) {
+      const c = parseCentavos(salario)
+      if (c <= 0) return setErro('Informe um salário válido.')
+      dados.salario_centavos = c
+    }
+
+    setEnviando(true)
+    try {
+      if (editando) await profissionaisApi.atualizar(ficha!.id, dados)
+      else await profissionaisApi.criar(dados)
+      onSalvo()
+    } catch (x) {
+      setErro(msg(x))
+      setEnviando(false)
+    }
+  }
+
+  return createPortal(
+    <div className={e.backdrop} onMouseDown={onClose}>
+      <div
+        className={e.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-label={editando ? 'Editar profissional' : 'Novo profissional'}
+        onMouseDown={(ev) => ev.stopPropagation()}
+      >
+        <div className={e.head}>
+          <h2 className={e.titulo}>{editando ? 'Editar profissional' : 'Novo profissional'}</h2>
+          <button type="button" className={e.fechar} onClick={onClose} aria-label="Fechar">×</button>
+        </div>
+
+        <form className={e.form} onSubmit={onSubmit} noValidate>
+          {erro && <div className={e.erro}>{erro}</div>}
+
+          <label className={e.campo}>
+            <span className={e.label}>Nome completo</span>
+            <input className={e.input} value={nome} onChange={(ev) => setNome(ev.target.value)} autoFocus />
+          </label>
+
+          <div className={e.linha2}>
+            <label className={e.campo}>
+              <span className={e.label}>CPF (opcional)</span>
+              <input className={e.input} value={cpf} onChange={(ev) => setCpf(ev.target.value)} inputMode="numeric" />
+            </label>
+            <label className={e.campo}>
+              <span className={e.label}>Categoria</span>
+              <select className={e.input} value={categoriaId} onChange={(ev) => setCategoriaId(ev.target.value)}>
+                <option value="">Sem categoria</option>
+                {cats.filter((c) => c.ativo).map((c) => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <label className={e.campo}>
+            <span className={e.label}>Remuneração</span>
+            <select className={e.input} value={modo} onChange={(ev) => setModo(ev.target.value as 'salario' | 'percentual')}>
+              <option value="salario">Salário fixo</option>
+              <option value="percentual">% das entradas dele</option>
+            </select>
+          </label>
+
+          {modo === 'salario' ? (
+            <label className={e.campo}>
+              <span className={e.label}>Salário</span>
+              <div className={e.valorWrap}>
+                <span className={e.prefixo}>R$</span>
+                <input
+                  className={e.input}
+                  value={salario}
+                  onChange={(ev) => setSalario(ev.target.value)}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                />
+              </div>
+            </label>
+          ) : (
+            <label className={e.campo}>
+              <span className={e.label}>Porcentagem das entradas</span>
+              <input
+                className={e.input}
+                value={pct}
+                onChange={(ev) => setPct(ev.target.value)}
+                placeholder="0,00 %"
+                inputMode="decimal"
+              />
+              <span className={a.hint}>Nesse modo o salário fica vazio — o valor sai da % das entradas dele.</span>
+            </label>
+          )}
+
+          <label className={e.campo}>
+            <span className={e.label}>Endereço (opcional)</span>
+            <input className={e.input} value={endereco} onChange={(ev) => setEndereco(ev.target.value)} maxLength={300} />
+          </label>
+
+          <label className={e.campo}>
+            <span className={e.label}>Benefícios (opcional)</span>
+            <input
+              className={e.input}
+              value={beneficios}
+              onChange={(ev) => setBeneficios(ev.target.value)}
+              placeholder="ex.: Plano de saúde, odontológico"
+              maxLength={500}
+            />
+          </label>
+
+          <div className={e.rodape}>
+            <span className={e.dataNota}>Vales/auxílios são adicionados na ficha, depois de salvar.</span>
+            <button type="submit" className={e.submit} disabled={enviando}>
+              {enviando ? 'Salvando…' : editando ? 'Salvar' : 'Criar ficha'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -827,7 +1350,7 @@ function CategoriasSaidaPanel() {
 
   const acoes = (c: CategoriaSaida) => (
     <>
-      {c.usuario_id == null && (
+      {c.profissional_id == null && (
         <button type="button" className={a.linkBtn} onClick={() => renomear(c)}>Renomear</button>
       )}
       <button type="button" className={a.linkBtn} onClick={() => toggle(c)}>{c.ativo ? 'Desativar' : 'Ativar'}</button>
@@ -889,7 +1412,7 @@ function CategoriasSaidaPanel() {
                   {subsDe(cat.id).map((su) => (
                     <div key={su.id} className={a.subItem}>
                       <span className={a.subNome}>{su.rotulo}</span>
-                      <Badge tone="neutral">{su.usuario_id ? 'funcionário' : 'outro'}</Badge>
+                      <Badge tone="neutral">{su.profissional_id ? 'profissional' : 'outro'}</Badge>
                       {!su.ativo && <Badge tone="neutral">inativo</Badge>}
                       <span className={a.acoesCat}>{acoes(su)}</span>
                     </div>
@@ -897,7 +1420,7 @@ function CategoriasSaidaPanel() {
 
                   <SubcategoriaForm
                     usuarios={usuarios}
-                    jaFuncionarios={subsDe(cat.id).filter((x) => x.usuario_id).map((x) => x.usuario_id!)}
+                    jaFuncionarios={subsDe(cat.id).filter((x) => x.profissional_id).map((x) => x.profissional_id!)}
                     onNome={(nome) => criar('subcategoria', cat.id, { nome })}
                     onFuncionario={(usuario_id) => criar('subcategoria', cat.id, { usuario_id })}
                   />
@@ -1096,6 +1619,26 @@ function UsuarioModal({
   const [mostrar, setMostrar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const [fichas, setFichas] = useState<Profissional[]>([])
+  const [fichaId, setFichaId] = useState<number | null>(usuario?.profissional_id ?? null)
+
+  // Fichas do Registro de profissional. Mantém a já vinculada mesmo se
+  // estiver desativada, senão o vínculo sumiria do select ao editar.
+  // Falha em silêncio: é conveniência, não pode travar o cadastro.
+  useEffect(() => {
+    profissionaisApi
+      .listar()
+      .then((r) => setFichas(r.profissionais.filter((f) => f.ativo || f.id === usuario?.profissional_id)))
+      .catch(() => {})
+  }, [usuario?.profissional_id])
+
+  // Vinculou: o nome passa a ser o da ficha. Desvinculou: mantém o que
+  // está lá para o gestor só corrigir, em vez de perder o que digitou.
+  const escolherFicha = (id: number | null) => {
+    setFichaId(id)
+    const f = fichas.find((x) => x.id === id)
+    if (f) setNome(f.nome)
+  }
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose()
@@ -1120,9 +1663,21 @@ function UsuarioModal({
     try {
       const perms = perfil === 'profissional' ? permissoes : []
       if (editando) {
-        await usuariosApi.atualizar(usuario!.id, { nome: nome.trim(), perfil, permissoes: perms })
+        await usuariosApi.atualizar(usuario!.id, {
+          nome: nome.trim(),
+          perfil,
+          profissional_id: fichaId,
+          permissoes: perms,
+        })
       } else {
-        const dados: NovoUsuario = { login: login.trim().toLowerCase(), nome: nome.trim(), perfil, permissoes: perms, senha }
+        const dados: NovoUsuario = {
+          login: login.trim().toLowerCase(),
+          nome: nome.trim(),
+          perfil,
+          profissional_id: fichaId,
+          permissoes: perms,
+          senha,
+        }
         await usuariosApi.criar(dados)
       }
       onSalvo()
@@ -1144,8 +1699,37 @@ function UsuarioModal({
           {erro && <div className={e.erro}>{erro}</div>}
 
           <label className={e.campo}>
+            <span className={e.label}>Profissional</span>
+            <select
+              className={e.input}
+              value={fichaId ?? ''}
+              onChange={(ev) => escolherFicha(ev.target.value ? Number(ev.target.value) : null)}
+              disabled={fichas.length === 0}
+            >
+              <option value="">Sem ficha — digitar o nome</option>
+              {fichas.map((f) => (
+                <option key={f.id} value={f.id}>{f.nome}{f.ativo ? '' : ' (desativado)'}</option>
+              ))}
+            </select>
+            <span className={a.hint}>
+              {fichas.length === 0
+                ? 'Nenhum profissional cadastrado ainda — cadastre na aba Registro de profissional.'
+                : 'Puxa a ficha do Registro de profissional. Gestor e operador podem ficar sem ficha.'}
+            </span>
+          </label>
+
+          <label className={e.campo}>
             <span className={e.label}>Nome completo</span>
-            <input className={e.input} value={nome} onChange={(ev) => setNome(ev.target.value)} placeholder="ex.: maria oliveira" autoFocus />
+            <input
+              className={e.input}
+              value={nome}
+              onChange={(ev) => setNome(ev.target.value)}
+              placeholder="ex.: maria oliveira"
+              readOnly={fichaId != null}
+              autoComplete="off"
+              autoFocus
+            />
+            {fichaId != null && <span className={a.hint}>Vem da ficha — renomeou lá, muda aqui também.</span>}
           </label>
 
           <label className={e.campo}>

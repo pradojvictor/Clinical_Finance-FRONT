@@ -269,16 +269,16 @@ export const tiposEntradaApi = {
 export interface SubtipoEntrada {
   id: number
   tipo_id: number
-  usuario_id: number | null
+  profissional_id: number | null
   nome: string | null
-  usuario_nome: string | null
+  profissional_nome: string | null
   rotulo: string
   ativo: boolean
 }
 export const subtiposEntradaApi = {
   listar: (tipoId?: number) =>
     req<{ subtipos: SubtipoEntrada[] }>(`/subtipos-entrada${tipoId ? `?tipo_id=${tipoId}` : ''}`),
-  criar: (dados: { tipo_id: number; usuario_id?: number; nome?: string }) =>
+  criar: (dados: { tipo_id: number; profissional_id?: number; nome?: string }) =>
     req<{ subtipo: SubtipoEntrada }>('/subtipos-entrada', { method: 'POST', body: JSON.stringify(dados) }),
   atualizar: (id: number, dados: Partial<{ nome: string; ativo: boolean }>) =>
     req<{ subtipo: SubtipoEntrada }>(`/subtipos-entrada/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }),
@@ -311,6 +311,9 @@ export interface NovaSaida {
   categoria_id: number
   subcategoria_id?: number | null
   observacao?: string
+  /** Pagamento de profissional: recorte usado no cálculo (grava o histórico). */
+  periodo_de?: string
+  periodo_ate?: string
 }
 export interface EditarSaida {
   data?: string
@@ -398,8 +401,8 @@ export interface CategoriaSaida {
   nome: string | null
   parent_id: number | null
   nivel: NivelCategoriaSaida
-  usuario_id: number | null
-  usuario_nome: string | null
+  profissional_id: number | null
+  profissional_nome: string | null
   rotulo: string
   ativo: boolean
 }
@@ -407,7 +410,7 @@ export interface NovaCategoriaSaida {
   nome?: string | null
   nivel: NivelCategoriaSaida
   parent_id?: number | null
-  usuario_id?: number | null
+  profissional_id?: number | null
 }
 export const categoriasSaidaApi = {
   listar: () => req<{ categorias: CategoriaSaida[] }>('/categorias-saida'),
@@ -484,23 +487,120 @@ export const balancoApi = {
     req<{ balanco: Balanco }>(`/balanco?de=${de}&ate=${ate}`),
 }
 
+// ---- Profissionais (ficha de RH, sem login) -----------------------
+export interface CategoriaProfissional {
+  id: number
+  nome: string
+  ativo: boolean
+}
+export interface ValeProfissional {
+  id: number
+  profissional_id: number
+  nome: string
+  percentual_bp: number | null
+  valor_centavos: number | null
+  ativo: boolean
+}
+export interface Profissional {
+  id: number
+  nome: string
+  cpf: string | null
+  categoria_id: number | null
+  categoria_nome: string | null
+  /** Vazio quando a remuneração é por % das entradas. */
+  salario_centavos: number | null
+  percentual_bp: number | null
+  endereco: string | null
+  beneficios: string | null
+  ativo: boolean
+  vales: ValeProfissional[]
+}
+export interface NovoProfissional {
+  nome: string
+  cpf?: string | null
+  categoria_id?: number | null
+  salario_centavos?: number | null
+  percentual_bp?: number | null
+  endereco?: string | null
+  beneficios?: string | null
+}
+export const categoriasProfissionalApi = {
+  listar: () => req<{ categorias: CategoriaProfissional[] }>('/categorias-profissional'),
+  criar: (nome: string) =>
+    req<{ categoria: CategoriaProfissional }>('/categorias-profissional', {
+      method: 'POST',
+      body: JSON.stringify({ nome }),
+    }),
+  atualizar: (id: number, dados: Partial<{ nome: string; ativo: boolean }>) =>
+    req<{ categoria: CategoriaProfissional }>(`/categorias-profissional/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dados),
+    }),
+  excluir: (id: number) => req<{ ok: boolean }>(`/categorias-profissional/${id}`, { method: 'DELETE' }),
+}
+/** Um salário recebido — a base fica congelada no momento do pagamento. */
+export interface PagamentoProfissional {
+  id: number
+  profissional_id: number
+  saida_id: number | null
+  data: string
+  valor_centavos: number
+  percentual_bp: number | null
+  base_liquido_centavos: number | null
+  periodo_de: string | null
+  periodo_ate: string | null
+}
+export const profissionaisApi = {
+  listar: () => req<{ profissionais: Profissional[] }>('/profissionais'),
+  pagamentos: (id: number) => req<{ pagamentos: PagamentoProfissional[] }>(`/profissionais/${id}/pagamentos`),
+  criar: (dados: NovoProfissional) =>
+    req<{ profissional: Profissional }>('/profissionais', { method: 'POST', body: JSON.stringify(dados) }),
+  atualizar: (id: number, dados: Partial<NovoProfissional & { ativo: boolean }>) =>
+    req<{ profissional: Profissional }>(`/profissionais/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }),
+  excluir: (id: number) => req<{ ok: boolean }>(`/profissionais/${id}`, { method: 'DELETE' }),
+  criarVale: (dados: { profissional_id: number; nome: string; percentual_bp?: number; valor_centavos?: number }) =>
+    req<{ vale: ValeProfissional }>('/profissionais/vales', { method: 'POST', body: JSON.stringify(dados) }),
+  excluirVale: (id: number) => req<{ ok: boolean }>(`/profissionais/vales/${id}`, { method: 'DELETE' }),
+  /** Base do pagamento: % da ficha × líquido das entradas dele no período. */
+  base: (profissional_id: number, de: string, ate: string) =>
+    req<{ base: BaseSalario }>(`/profissionais/base?profissional_id=${profissional_id}&de=${de}&ate=${ate}`),
+}
+
+// ---- Base do pagamento (% das entradas do profissional) -----------
+// A % mora na ficha (profissionais.percentual_bp).
+export interface BaseSalario {
+  profissional_id: number
+  profissional_nome: string
+  de: string
+  ate: string
+  qtd_entradas: number
+  entradas_liquido_centavos: number
+  percentual_bp: number
+  valor_centavos: number
+}
+
 // ---- Usuários (administração) -------------------------------------
 export type Perfil = 'gestor' | 'operador' | 'profissional'
 
 export interface UsuarioAdmin {
   id: number
   login: string
+  /** Vem da ficha quando há vínculo; senão, o nome digitado. */
   nome: string
   perfil: Perfil
   permissoes: string[]
   ativo: boolean
   ultimo_acesso: string | null
   criado_em: string
+  /** Ficha do Registro de profissional vinculada a este login. */
+  profissional_id: number | null
 }
 export interface NovoUsuario {
   login: string
   nome: string
   perfil: Perfil
+  /** Vincula à ficha — o nome passa a sair dela. */
+  profissional_id?: number | null
   permissoes?: string[]
   senha: string
 }
@@ -508,7 +608,11 @@ export const usuariosApi = {
   listar: () => req<{ usuarios: UsuarioAdmin[] }>('/usuarios'),
   criar: (dados: NovoUsuario) =>
     req<{ usuario: UsuarioAdmin }>('/usuarios', { method: 'POST', body: JSON.stringify(dados) }),
-  atualizar: (id: number, dados: Partial<{ nome: string; perfil: Perfil; permissoes: string[]; ativo: boolean }>) =>
+  // profissional_id: null desvincula da ficha.
+  atualizar: (
+    id: number,
+    dados: Partial<{ nome: string; perfil: Perfil; profissional_id: number | null; permissoes: string[]; ativo: boolean }>,
+  ) =>
     req<{ usuario: UsuarioAdmin }>(`/usuarios/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }),
   senha: (id: number, senha: string) =>
     req<{ ok: boolean }>(`/usuarios/${id}/senha`, { method: 'PATCH', body: JSON.stringify({ senha }) }),
