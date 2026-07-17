@@ -1,13 +1,22 @@
+/* Card flutuante, não uma faixa colada na tela.
+   - As laterais usam o MESMO gutter do conteúdo (--sp-8), então a borda
+     do header alinha com a borda dos cards da página.
+   - O padding interno usa --sp-5, o mesmo dos blocos de conteúdo: assim o
+     título do header alinha com os títulos de dentro dos cards.
+   - Sem margin-bottom: o respiro abaixo já vem do padding-top do
+     conteúdo — somar os dois abriria um vão grande demais. */
 .topbar {
   grid-area: topbar;
-  height: var(--topbar-h);
+  margin: var(--sp-4) var(--sp-8) 0;
+  height: calc(var(--topbar-h) - var(--sp-4));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
-  padding: 0 var(--sp-8);
+  padding: 0 var(--sp-5);
   background: var(--surface);
-  border-bottom: 0.0625rem solid var(--border);
+  border: 0.0625rem solid var(--border);
+  border-radius: var(--radius-lg);
 }
 
 .titleBlock {

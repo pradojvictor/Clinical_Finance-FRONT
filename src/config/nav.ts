@@ -51,3 +51,25 @@ export const SECAO_LABEL: Record<Secao, string> = {
   balanco: 'Balanço',
 }
 export const SECOES: Secao[] = ['entradas', 'saidas', 'transferencias', 'procedimentos', 'balanco']
+
+/**
+ * O usuário pode ver esta seção?
+ *
+ * Regra única do front (o servidor confere de novo — aqui é só para não
+ * mostrar botão que vai dar 403):
+ *  - gestor: tudo;
+ *  - operador: o que o perfil dele alcança no NAV_ITEMS;
+ *  - profissional: só as seções que o gestor liberou, e só leitura.
+ *
+ * Existe para o Início não virar uma terceira cópia desta lógica — hoje
+ * ela já vive no Sidebar e espalhada nas páginas.
+ */
+export function podeVerSecao(
+  user: { perfil: Role | string; permissoes?: string[] } | null,
+  secao: Secao,
+): boolean {
+  if (!user) return false
+  if (user.perfil === 'profissional') return (user.permissoes ?? []).includes(secao)
+  const item = NAV_ITEMS.find((i) => i.secao === secao)
+  return item ? item.roles.includes(user.perfil as Role) : false
+}

@@ -1,14 +1,171 @@
-/* Página inicial — apenas a logo centralizada (ponto de partida). */
-.wrap {
-  height: 100%;
-  min-height: 28rem;
-  display: grid;
-  place-items: center;
-  padding: var(--sp-8);
+/* Início — painel curto: hoje, o mês e onde o dinheiro está.
+   Cabe sem rolagem no alvo do projeto (1360 x 680). */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
 }
-.logo {
-  width: min(28rem, 60%);
-  height: auto;
-  object-fit: contain;
-  user-select: none;
+
+/* ---- Saudação ------------------------------------------------------ */
+.saudacao {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+.titulo {
+  font-size: var(--fs-xl, 1.5rem);
+  font-weight: 700;
+  color: var(--text);
+}
+.data {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  /* O toLocaleDateString devolve "sexta-feira, 17 de julho" em minúsculo. */
+  text-transform: capitalize;
+}
+
+/* ---- Hoje: o número do dia + a ação mais frequente ------------------ */
+.hoje {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6);
+  border-radius: var(--radius-lg);
+  background: var(--brand-blue);
+  color: #ffffff;
+}
+.hojeInfo {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.hojeLabel {
+  font-size: var(--fs-sm);
+  opacity: 0.85;
+}
+.hojeValor {
+  font-size: var(--fs-xl, 1.75rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.hojeQtd {
+  font-size: var(--fs-xs);
+  opacity: 0.8;
+}
+.acaoPrim {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0.625rem 1.125rem;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: var(--brand-blue-700);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+.acaoPrim:hover {
+  opacity: 0.9;
+}
+
+/* ---- Blocos (mês / onde o dinheiro está) --------------------------- */
+.bloco {
+  padding: var(--sp-4) var(--sp-5) var(--sp-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.blocoHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+.blocoTit {
+  font-weight: 600;
+  color: var(--text);
+}
+.blocoTotal {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.verLink {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--brand-blue-700);
+}
+.verLink:hover {
+  text-decoration: underline;
+}
+
+/* ---- Mês: três números lado a lado --------------------------------- */
+.mesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-4);
+}
+.mesItem {
+  display: grid;
+  gap: 0.1rem;
+}
+.mesLabel {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.mesValor {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Onde o dinheiro está ------------------------------------------ */
+.locais {
+  display: grid;
+  gap: var(--sp-2);
+}
+.local {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.local:last-child {
+  border-bottom: none;
+}
+.localNome {
+  color: var(--text-muted);
+}
+
+.pos { color: var(--success); }
+.neg { color: var(--danger); }
+
+.vazio {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+/* Alvo 1366 x 620: os três números do mês empilham antes de espremer. */
+@media (max-width: 48rem) {
+  .mesGrid {
+    grid-template-columns: 1fr;
+    gap: var(--sp-2);
+  }
+  .mesItem {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .hoje {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

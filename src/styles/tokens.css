@@ -89,7 +89,8 @@
 
   /* ---- Layout --------------------------------------------------- */
   --sidebar-w:  5.5rem;  /* trilho estreito só com ícones */
-  --topbar-h:   4rem;    /* 64px  */
+  /* Linha da grade do topo = card de 4rem + 1rem de respiro acima. */
+  --topbar-h:   5rem;    /* 80px  */
   --nav-h:      4.5rem;  /* navbar do site público */
   --container:  75rem;   /* largura máx. do site público */
 }

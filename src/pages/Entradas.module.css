@@ -295,3 +295,77 @@
   justify-content: flex-end;
   gap: var(--sp-3);
 }
+
+/* ---- Anexos da saída (recibos) ------------------------------------- */
+.anexoLista {
+  display: grid;
+  gap: var(--sp-2);
+}
+.anexoItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2);
+  border: 0.0625rem solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Miniatura quadrada e fixa: recibo fotografado vem em qualquer proporção,
+   e sem isto a lista fica com linhas de alturas diferentes. */
+.anexoMini {
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.anexoMini img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.anexoPdf {
+  color: var(--danger);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.anexoInfo {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+/* O nome do arquivo pode ser longo: corta, não empurra o botão pra fora. */
+.anexoInfo > a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Confirmação de remoção do recibo.
+   Empilha (grid, não flex em linha): o campo de senha ocupa a largura
+   inteira em vez de disputar espaço com os botões. Fundo de perigo, não
+   o azul de informação — é exclusão sem desfazer. */
+.anexoRemover {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 0.0625rem solid var(--danger);
+  border-radius: var(--radius-md);
+  background: var(--danger-bg);
+}
+.anexoRemoverTexto {
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+}
+.anexoRemoverAcoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}

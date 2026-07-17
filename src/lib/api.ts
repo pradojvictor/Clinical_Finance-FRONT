@@ -263,6 +263,8 @@ export interface SaidaDetalhe {
   /** Quando foi REGISTRADO (não a data do movimento) — define a janela
       de 24h em que ainda dá para excluir. */
   criado_em: string
+  /** Quantos recibos esta saída tem. */
+  qtd_anexos: number
 }
 export interface NovaSaida {
   forma: FormaSaida
@@ -301,7 +303,47 @@ export const saidasApi = {
   // Se for pagamento de profissional, o registro do pagamento vai junto.
   excluir: (id: number, senha: string) =>
     req<{ ok: boolean }>(`/saidas/${id}`, { method: 'DELETE', body: JSON.stringify({ senha }) }),
+
+  // ---- Anexos (recibo: foto ou PDF) ----
+  // O upload NÃO passa pelo req<>: aquele helper força Content-Type JSON,
+  // e multipart precisa que o navegador monte o boundary sozinho.
+  anexar: async (saidaId: number, arquivos: File[]): Promise<{ anexos: AnexoInfo[] }> => {
+    const fd = new FormData()
+    for (const f of arquivos) fd.append('arquivos', f)
+    const res = await fetch(`/api/saidas/${saidaId}/anexos`, {
+      method: 'POST',
+      credentials: 'include',
+      body: fd, // sem headers: o boundary é do navegador
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      throw new ApiError(
+        (data && typeof data === 'object' && 'erro' in data ? String(data.erro) : null) ??
+          'Não foi possível enviar o arquivo.',
+        res.status,
+      )
+    }
+    return data as { anexos: AnexoInfo[] }
+  },
+  anexos: (saidaId: number) => req<{ anexos: AnexoInfo[] }>(`/saidas/${saidaId}/anexos`),
+  excluirAnexo: (anexoId: number, senha: string) =>
+    req<{ ok: boolean }>(`/saidas/anexos/${anexoId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ senha }),
+    }),
 }
+
+/** Anexo de uma saída. Os bytes nunca vêm aqui — saem pela URL abaixo. */
+export interface AnexoInfo {
+  id: number
+  saida_id: number
+  nome: string
+  mime: 'image/webp' | 'application/pdf'
+  tamanho_bytes: number
+  criado_em: string
+}
+/** URL dos bytes. Rota autenticada pelo cookie — não é pasta pública. */
+export const urlAnexo = (anexoId: number) => `/api/saidas/anexos/${anexoId}/arquivo`
 
 // ---- Saldos por local (caixa + bancos) ---------------------------
 export interface SaldoLocal {

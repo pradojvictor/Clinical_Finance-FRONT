@@ -22,6 +22,7 @@ import { useAuth } from '../lib/auth'
 import { FORMA_LABEL, FORMAS_SAIDA, brl, dataBR, dentroDaJanela, hojeISO, parseCentavos, periodoMes } from '../lib/format'
 import CalculoSalario from '../components/CalculoSalario'
 import ExcluirMovimentoModal from '../components/ExcluirMovimentoModal'
+import AnexosModal from '../components/AnexosModal'
 import s from './page.module.css'
 import e from './Entradas.module.css'
 
@@ -40,6 +41,7 @@ export default function Saidas() {
   const [modal, setModal] = useState(false)
   const [editando, setEditando] = useState<SaidaDetalhe | null>(null)
   const [excluindo, setExcluindo] = useState<SaidaDetalhe | null>(null)
+  const [vendoAnexos, setVendoAnexos] = useState<SaidaDetalhe | null>(null)
   const { user } = useAuth()
   const soLeitura = user?.perfil === 'profissional'
 
@@ -121,6 +123,16 @@ export default function Saidas() {
                     <td className={s.num}>
                       {!soLeitura && (
                         <div className={e.acoesCel}>
+                          {/* Recibos: sempre disponível — serve para ver os
+                              que existem e para anexar quando não há. */}
+                          <button
+                            type="button"
+                            className={e.acaoLink}
+                            onClick={() => setVendoAnexos(sd)}
+                            title={sd.qtd_anexos > 0 ? `${sd.qtd_anexos} recibo(s)` : 'Anexar recibo'}
+                          >
+                            {sd.qtd_anexos > 0 ? `Recibo (${sd.qtd_anexos})` : 'Recibo'}
+                          </button>
                           <button type="button" className={e.acaoLink} onClick={() => setEditando(sd)}>Editar</button>
                           {/* Excluir só nas primeiras 24h do registro. */}
                           {dentroDaJanela(sd.criado_em) && (
@@ -186,6 +198,14 @@ export default function Saidas() {
           }}
         />
       )}
+
+      {vendoAnexos && (
+        <AnexosModal
+          saida={vendoAnexos}
+          onClose={() => setVendoAnexos(null)}
+          onMudou={carregar}
+        />
+      )}
     </div>
   )
 }
@@ -198,6 +218,9 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
   const [categoriaId, setCategoriaId] = useState('')
   const [subcategoriaId, setSubcategoriaId] = useState('')
   const [observacao, setObservacao] = useState('')
+  // Anexos escolhidos antes de salvar. Só sobem DEPOIS que a saída existe
+  // (o anexo aponta para ela), então o envio é um segundo passo.
+  const [arquivos, setArquivos] = useState<File[]>([])
 
   const [bancos, setBancos] = useState<Banco[]>([])
   const [cats, setCats] = useState<CategoriaSaida[]>([])
@@ -290,7 +313,24 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
     }
     setEnviando(true)
     try {
-      await saidasApi.criar(dados)
+      const { saida } = await saidasApi.criar(dados)
+
+      // A saída já existe neste ponto. Se o anexo falhar, NÃO dá para
+      // fingir que deu tudo certo nem desfazer a saída sem senha — então
+      // avisa exatamente o que aconteceu e deixa o gestor tentar de novo
+      // pela lista, em vez de sumir com o recibo em silêncio.
+      if (arquivos.length > 0) {
+        try {
+          await saidasApi.anexar(saida.id, arquivos)
+        } catch (x) {
+          setErro(
+            `A saída foi registrada, mas o anexo falhou: ${msg(x)} ` +
+              'Você pode anexar o recibo pela lista.',
+          )
+          setEnviando(false)
+          return
+        }
+      }
       onSalvo()
     } catch (x) {
       setErro(msg(x))
@@ -427,6 +467,25 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
             <span className={e.label}>Observação (opcional)</span>
             <input className={e.input} value={observacao} onChange={(ev) => setObservacao(ev.target.value)} />
           </label>
+
+          {/* Recibo — logo abaixo da observação. */}
+          <div className={e.campo}>
+            <span className={e.label}>Recibo (opcional)</span>
+            <input
+              className={e.input}
+              type="file"
+              multiple
+              // accept é conveniência do seletor, não segurança: quem decide
+              // o que o arquivo é, olhando o conteúdo, é o servidor.
+              accept="image/*,application/pdf,.pdf,.heic"
+              onChange={(ev) => setArquivos(Array.from(ev.target.files ?? []))}
+            />
+            <span className={e.dataNota}>
+              {arquivos.length === 0
+                ? 'Foto ou PDF. A foto é reduzida no envio — pode mandar direto do celular.'
+                : `${arquivos.length} arquivo(s): ${arquivos.map((f) => f.name).join(', ')}`}
+            </span>
+          </div>
 
           <div className={e.rodape}>
             <span className={e.dataNota}>Registro exclusivo do gestor</span>
