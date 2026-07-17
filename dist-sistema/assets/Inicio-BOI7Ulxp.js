@@ -1,1 +1,0 @@
-import{i as e,n as t}from"./index-DrHdRpvc.js";var n={wrap:`_wrap_13169_2`,logo:`_logo_13169_9`},r=e();function i(){return(0,r.jsx)(`div`,{className:n.wrap,children:(0,r.jsx)(`img`,{src:t,alt:`Clinleste`,className:n.logo})})}export{i as default};
