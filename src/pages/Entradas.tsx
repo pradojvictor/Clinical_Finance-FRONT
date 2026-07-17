@@ -4,7 +4,8 @@ import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Icon from '../components/ui/Icon'
 import SeletorMesAno from '../components/ui/SeletorMesAno'
-import { periodoMes } from '../lib/format'
+import { periodoMes , dentroDaJanela } from '../lib/format'
+import ExcluirMovimentoModal from '../components/ExcluirMovimentoModal'
 import {
   ApiError,
   bancosApi,
@@ -66,6 +67,7 @@ export default function Entradas() {
   const [modal, setModal] = useState(false)
   const [importar, setImportar] = useState(false)
   const [editando, setEditando] = useState<EntradaDetalhe | null>(null)
+  const [excluindo, setExcluindo] = useState<EntradaDetalhe | null>(null)
   const { user } = useAuth()
   const soLeitura = user?.perfil === 'profissional'
 
@@ -160,7 +162,17 @@ export default function Entradas() {
                     <td className={s.num}>{brl(en.valor_liquido_centavos)}</td>
                     <td className={s.num}>
                       {!soLeitura && (
-                        <button type="button" className={e.acaoLink} onClick={() => setEditando(en)}>Editar</button>
+                        <div className={e.acoesCel}>
+                          <button type="button" className={e.acaoLink} onClick={() => setEditando(en)}>Editar</button>
+                          {/* Excluir só nas primeiras 24h do registro. Fora
+                              da janela o botão nem aparece — o servidor
+                              recusaria de qualquer forma. */}
+                          {dentroDaJanela(en.criado_em) && (
+                            <button type="button" className={e.acaoPerigo} onClick={() => setExcluindo(en)}>
+                              Excluir
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -187,6 +199,24 @@ export default function Entradas() {
           onClose={() => setEditando(null)}
           onSalvo={() => {
             setEditando(null)
+            carregar()
+          }}
+        />
+      )}
+
+      {excluindo && (
+        <ExcluirMovimentoModal
+          tipo="entrada"
+          descricao={[excluindo.tipo_nome, excluindo.subtipo_nome, excluindo.paciente_nome]
+            .filter(Boolean)
+            .join(' · ')}
+          valorCentavos={excluindo.valor_centavos}
+          data={excluindo.data}
+          criadoEm={excluindo.criado_em}
+          onExcluir={(senha) => entradasApi.excluir(excluindo.id, senha)}
+          onClose={() => setExcluindo(null)}
+          onExcluido={() => {
+            setExcluindo(null)
             carregar()
           }}
         />

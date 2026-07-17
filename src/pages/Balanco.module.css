@@ -438,3 +438,30 @@
 .movCalc {
   margin-top: var(--sp-2);
 }
+
+/* ---- Nota da taxa (modo "Com taxa") -------------------------------- */
+/* Explica de onde veio o líquido, sem competir com o valor: menor,
+   apagada e alinhada à direita, como uma nota de rodapé do número. */
+.notaTaxa {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--text-muted);
+  font-size: var(--fs-xs, 0.7rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+/* Linha do tipo: valor e a nota da taxa empilhados à direita. */
+.tipoValorCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+/* Nota da taxa dentro do card por forma: alinhada à direita, sob o valor. */
+.linhaNota {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.1rem;
+}

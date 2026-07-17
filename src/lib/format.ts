@@ -43,3 +43,20 @@ export function periodoAno(ano: number): { de: string; ate: string } {
   const atual = new Date().getFullYear()
   return { de: `${ano}-01-01`, ate: ano === atual ? hojeISO() : `${ano}-12-31` }
 }
+
+/** Janela em que um movimento ainda pode ser excluído: 24h a partir do
+    REGISTRO (criado_em), não da data do movimento — que pode ser
+    retroativa. O servidor confere de novo; isto é só para a tela não
+    oferecer um botão que vai falhar. */
+export const JANELA_EXCLUSAO_H = 24
+export function dentroDaJanela(criadoEm: string): boolean {
+  const h = (Date.now() - new Date(criadoEm).getTime()) / 3_600_000
+  return h >= 0 && h < JANELA_EXCLUSAO_H
+}
+/** Quanto falta da janela, em texto curto ("3h", "12min"). */
+export function restaDaJanela(criadoEm: string): string {
+  const ms = new Date(criadoEm).getTime() + JANELA_EXCLUSAO_H * 3_600_000 - Date.now()
+  if (ms <= 0) return ''
+  const h = Math.floor(ms / 3_600_000)
+  return h >= 1 ? `${h}h` : `${Math.max(1, Math.floor(ms / 60_000))}min`
+}

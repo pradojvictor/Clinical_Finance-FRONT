@@ -196,7 +196,9 @@ function BancosPanel() {
 function TiposEntradaPanel() {
   const [tipos, setTipos] = useState<TipoEntrada[] | null>(null)
   const [subtipos, setSubtipos] = useState<SubtipoEntrada[]>([])
-  const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
+  // Fichas do Registro de profissional — NÃO usuários. Nem todo
+  // profissional tem login, e o vínculo aqui é com a ficha.
+  const [fichas, setFichas] = useState<Profissional[]>([])
   const [erro, setErro] = useState<string | null>(null)
   const [novo, setNovo] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -207,7 +209,7 @@ function TiposEntradaPanel() {
   }
   useEffect(() => {
     carregar()
-    usuariosApi.listar().then((r) => setUsuarios(r.usuarios.filter((u) => u.ativo))).catch(() => {})
+    profissionaisApi.listar().then((r) => setFichas(r.profissionais.filter((f) => f.ativo))).catch(() => {})
   }, [])
 
   const adicionar = async (e: FormEvent) => {
@@ -290,7 +292,7 @@ function TiposEntradaPanel() {
               <SubtiposDeTipo
                 tipoId={t.id}
                 subtipos={subtipos.filter((x) => x.tipo_id === t.id)}
-                usuarios={usuarios}
+                fichas={fichas}
                 onErro={setErro}
                 onChange={carregar}
               />
@@ -302,27 +304,29 @@ function TiposEntradaPanel() {
   )
 }
 
-/* Subcategorias de UM tipo: profissional (usuário) OU nome próprio. */
+/* Subcategorias de UM tipo: profissional (ficha) OU nome próprio.
+   A lista vem do Registro de profissional, não dos usuários: nem todo
+   profissional tem login, e o vínculo é com a ficha. */
 function SubtiposDeTipo({
   tipoId,
   subtipos,
-  usuarios,
+  fichas,
   onErro,
   onChange,
 }: {
   tipoId: number
   subtipos: SubtipoEntrada[]
-  usuarios: UsuarioAdmin[]
+  fichas: Profissional[]
   onErro: (m: string | null) => void
   onChange: () => void
 }) {
   const [kind, setKind] = useState<'profissional' | 'outro'>('profissional')
-  const [usuarioId, setUsuarioId] = useState('')
+  const [fichaId, setFichaId] = useState('')
   const [nome, setNome] = useState('')
   const [salvando, setSalvando] = useState(false)
 
   const jaUsados = new Set(subtipos.filter((x) => x.profissional_id).map((x) => x.profissional_id))
-  const disponiveis = usuarios.filter((u) => !jaUsados.has(u.id))
+  const disponiveis = fichas.filter((f) => !jaUsados.has(f.id))
 
   const adicionar = async (e: FormEvent) => {
     e.preventDefault()
@@ -330,9 +334,9 @@ function SubtiposDeTipo({
     setSalvando(true)
     try {
       if (kind === 'profissional') {
-        if (!usuarioId) return
-        await subtiposEntradaApi.criar({ tipo_id: tipoId, profissional_id: Number(usuarioId) })
-        setUsuarioId('')
+        if (!fichaId) return
+        await subtiposEntradaApi.criar({ tipo_id: tipoId, profissional_id: Number(fichaId) })
+        setFichaId('')
       } else {
         if (!nome.trim()) return
         await subtiposEntradaApi.criar({ tipo_id: tipoId, nome: nome.trim() })
@@ -395,10 +399,15 @@ function SubtiposDeTipo({
           <option value="outro">Outro</option>
         </select>
         {kind === 'profissional' ? (
-          <select className={a.addInput} value={usuarioId} onChange={(e) => setUsuarioId(e.target.value)}>
-            <option value="">Selecione o profissional…</option>
-            {disponiveis.map((u) => (
-              <option key={u.id} value={u.id}>{u.nome}</option>
+          <select className={a.addInput} value={fichaId} onChange={(e) => setFichaId(e.target.value)}>
+            <option value="">
+              {disponiveis.length === 0 ? 'Nenhum profissional disponível' : 'Selecione o profissional…'}
+            </option>
+            {disponiveis.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.nome}
+                {f.profissao ? ` — ${f.profissao}` : ''}
+              </option>
             ))}
           </select>
         ) : (
@@ -1146,31 +1155,33 @@ function AddInlineForm({
   )
 }
 
-/* Subcategoria de saída: funcionário (usuário) OU nome próprio (como os subtipos de entrada). */
+/* Subcategoria de saída: profissional (ficha) OU nome próprio.
+   Assim como nos subtipos de entrada, a lista vem do Registro de
+   profissional — não dos usuários. */
 function SubcategoriaForm({
-  usuarios,
+  fichas,
   jaFuncionarios,
   onNome,
   onFuncionario,
 }: {
-  usuarios: UsuarioAdmin[]
+  fichas: Profissional[]
   jaFuncionarios: number[]
   onNome: (nome: string) => void
-  onFuncionario: (usuarioId: number) => void
+  onFuncionario: (profissionalId: number) => void
 }) {
   const [kind, setKind] = useState<'funcionario' | 'outro'>('outro')
-  const [usuarioId, setUsuarioId] = useState('')
+  const [fichaId, setFichaId] = useState('')
   const [nome, setNome] = useState('')
 
   const usados = new Set(jaFuncionarios)
-  const disponiveis = usuarios.filter((u) => !usados.has(u.id))
+  const disponiveis = fichas.filter((f) => !usados.has(f.id))
 
   const submit = (ev: FormEvent) => {
     ev.preventDefault()
     if (kind === 'funcionario') {
-      if (!usuarioId) return
-      onFuncionario(Number(usuarioId))
-      setUsuarioId('')
+      if (!fichaId) return
+      onFuncionario(Number(fichaId))
+      setFichaId('')
     } else {
       if (!nome.trim()) return
       onNome(nome.trim())
@@ -1190,10 +1201,15 @@ function SubcategoriaForm({
         <option value="outro">Outro</option>
       </select>
       {kind === 'funcionario' ? (
-        <select className={a.addInput} value={usuarioId} onChange={(e) => setUsuarioId(e.target.value)}>
-          <option value="">Selecione o funcionário…</option>
-          {disponiveis.map((u) => (
-            <option key={u.id} value={u.id}>{u.nome}</option>
+        <select className={a.addInput} value={fichaId} onChange={(e) => setFichaId(e.target.value)}>
+          <option value="">
+            {disponiveis.length === 0 ? 'Nenhum profissional disponível' : 'Selecione o profissional…'}
+          </option>
+          {disponiveis.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.nome}
+              {f.profissao ? ` — ${f.profissao}` : ''}
+            </option>
           ))}
         </select>
       ) : (
@@ -1212,7 +1228,9 @@ function SubcategoriaForm({
 
 function CategoriasSaidaPanel() {
   const [cats, setCats] = useState<CategoriaSaida[] | null>(null)
-  const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
+  // Fichas do Registro de profissional — NÃO usuários. Nem todo
+  // profissional tem login, e a subcategoria vincula a ficha.
+  const [fichas, setFichas] = useState<Profissional[]>([])
   const [erro, setErro] = useState<string | null>(null)
   const [novaCentral, setNovaCentral] = useState('')
 
@@ -1221,13 +1239,13 @@ function CategoriasSaidaPanel() {
   }
   useEffect(() => {
     carregar()
-    usuariosApi.listar().then((r) => setUsuarios(r.usuarios.filter((u) => u.ativo))).catch(() => {})
+    profissionaisApi.listar().then((r) => setFichas(r.profissionais.filter((f) => f.ativo))).catch(() => {})
   }, [])
 
   const criar = async (
     nivel: NivelCategoriaSaida,
     parent_id: number | null,
-    dados: { nome?: string; usuario_id?: number },
+    dados: { nome?: string; profissional_id?: number },
   ) => {
     setErro(null)
     try {
@@ -1344,10 +1362,10 @@ function CategoriasSaidaPanel() {
                   ))}
 
                   <SubcategoriaForm
-                    usuarios={usuarios}
+                    fichas={fichas}
                     jaFuncionarios={subsDe(cat.id).filter((x) => x.profissional_id).map((x) => x.profissional_id!)}
                     onNome={(nome) => criar('subcategoria', cat.id, { nome })}
-                    onFuncionario={(usuario_id) => criar('subcategoria', cat.id, { usuario_id })}
+                    onFuncionario={(profissional_id) => criar('subcategoria', cat.id, { profissional_id })}
                   />
                 </div>
               ))}

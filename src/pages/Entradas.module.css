@@ -243,3 +243,55 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* ---- Exclusão de movimento (24h, com senha) ------------------------ */
+/* Vermelho de propósito: exclusão não tem desfazer, e o botão não deve
+   parecer o mesmo "Salvar" azul que o gestor clica no automático. */
+.submitPerigo {
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-md);
+  background: var(--danger);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: var(--fs-md);
+  transition: filter 0.15s ease;
+}
+.submitPerigo:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+.submitPerigo:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cancelar {
+  padding: 0.625rem 1rem;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: var(--fs-md);
+}
+.cancelar:hover {
+  color: var(--text);
+}
+
+/* Ação destrutiva na linha da lista. */
+.acaoPerigo {
+  background: none;
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.acaoPerigo:hover {
+  text-decoration: underline;
+}
+
+/* Ações da linha (Editar / Excluir). Sem isto os dois botões encostam:
+   são inline e não têm margem própria. Fica à direita, junto da coluna
+   numérica onde a célula vive. */
+.acoesCel {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+}

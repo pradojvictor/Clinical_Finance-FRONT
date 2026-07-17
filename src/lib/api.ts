@@ -128,6 +128,9 @@ export interface EntradaDetalhe {
   subtipo_nome: string | null
   operador_nome: string
   observacao: string | null
+  /** Quando foi REGISTRADO (não a data do movimento) — define a janela
+      de 24h em que ainda dá para excluir. */
+  criado_em: string
 }
 
 export interface NovaEntrada {
@@ -190,6 +193,9 @@ export const entradasApi = {
       method: 'PATCH',
       body: JSON.stringify({ ...dados, senha }),
     }),
+  // Só nas primeiras 24h do registro — a janela é conferida no servidor.
+  excluir: (id: number, senha: string) =>
+    req<{ ok: boolean }>(`/entradas/${id}`, { method: 'DELETE', body: JSON.stringify({ senha }) }),
 }
 export interface EditarEntrada {
   data?: string
@@ -254,6 +260,9 @@ export interface SaidaDetalhe {
   banco_nome: string | null
   observacao: string | null
   operador_nome: string
+  /** Quando foi REGISTRADO (não a data do movimento) — define a janela
+      de 24h em que ainda dá para excluir. */
+  criado_em: string
 }
 export interface NovaSaida {
   forma: FormaSaida
@@ -288,6 +297,10 @@ export const saidasApi = {
     req<{ saida: SaidaDetalhe }>('/saidas', { method: 'POST', body: JSON.stringify(dados) }),
   editar: (id: number, dados: EditarSaida, senha: string) =>
     req<{ saida: SaidaDetalhe }>(`/saidas/${id}`, { method: 'PATCH', body: JSON.stringify({ ...dados, senha }) }),
+  // Só nas primeiras 24h do registro — a janela é conferida no servidor.
+  // Se for pagamento de profissional, o registro do pagamento vai junto.
+  excluir: (id: number, senha: string) =>
+    req<{ ok: boolean }>(`/saidas/${id}`, { method: 'DELETE', body: JSON.stringify({ senha }) }),
 }
 
 // ---- Saldos por local (caixa + bancos) ---------------------------
@@ -381,6 +394,9 @@ export interface ResumoForma {
   qtd_entradas: number
   saidas_centavos: number
   qtd_saidas: number
+  /** A taxa quando TODAS as entradas do grupo têm a mesma; null quando há
+      mais de uma — aí a % seria média e não existe em entrada nenhuma. */
+  taxa_bp_unica: number | null
 }
 export interface BalancoTotal {
   entradas_bruto_centavos: number
@@ -395,6 +411,8 @@ export interface ResumoTipoEntrada {
   bruto_centavos: number
   liquido_centavos: number
   qtd: number
+  /** A taxa quando todas as entradas do tipo têm a mesma; senão null. */
+  taxa_bp_unica: number | null
 }
 export interface ResumoCategoriaSaida {
   categoria_id: number | null

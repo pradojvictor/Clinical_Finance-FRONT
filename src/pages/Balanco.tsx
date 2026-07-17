@@ -18,6 +18,52 @@ const COR: Record<Forma, string> = {
 
 type Periodo = 'mes' | 'ano'
 
+/** Taxa de um grupo de entradas (total, forma ou tipo).
+
+    A porcentagem só aparece quando o servidor garante que o grupo inteiro
+    tem a MESMA taxa (`taxaBpUnica`). Misturou taxas — um tipo com espécie
+    a 0% e débito a 10% —, vem null e mostramos só o valor: a média daria
+    "8,2%", que não existe em entrada nenhuma.
+
+    Some quando não há taxa: nada a explicar em espécie ou banco a 0%.
+    `compacto` encurta para caber nas linhas estreitas. */
+function TaxaGrupo({
+  bruto,
+  liquido,
+  taxaBpUnica,
+  compacto = false,
+}: {
+  bruto: number
+  liquido: number
+  taxaBpUnica: number | null
+  compacto?: boolean
+}) {
+  const taxa = bruto - liquido
+  if (taxa <= 0 || bruto <= 0) return null
+  const pct =
+    taxaBpUnica != null ? String(taxaBpUnica / 100).replace('.', ',') : null
+  const comPct = pct ? `taxa ${pct}% = − ${brl(taxa)}` : `taxa − ${brl(taxa)}`
+  return (
+    <span className={b.notaTaxa}>
+      {compacto ? comPct : `líquido de ${brl(bruto)} · ${comPct}`}
+    </span>
+  )
+}
+
+/** Taxa de UMA entrada, na gaveta. Aqui a % é real: é o snapshot que
+    ficou congelado naquela entrada (banco x forma do dia). Some quando a
+    entrada não tem taxa — consulta em espécie aparece sem nada. */
+function TaxaDoItem({ bruto, liquido }: { bruto: number; liquido: number }) {
+  const taxa = bruto - liquido
+  if (taxa <= 0 || bruto <= 0) return null
+  const pct = ((taxa / bruto) * 100).toFixed(1).replace('.', ',').replace(',0', '')
+  return (
+    <span className={b.notaTaxa}>
+      bruto {brl(bruto)} · taxa {pct}% = − {brl(taxa)}
+    </span>
+  )
+}
+
 export default function Balanco() {
   const agora = new Date()
   const [periodo, setPeriodo] = useState<Periodo>('mes')
@@ -120,6 +166,15 @@ export default function Balanco() {
         <div className={b.geralItem}>
           <span className={b.geralLabel}>Entradas</span>
           <strong className={b.geralValor}>{brl(totalEntradas)}</strong>
+          {comTaxa && dados && (
+            // Total soma todas as formas: taxa única só por acaso, então
+            // nunca arriscamos uma % aqui.
+            <TaxaGrupo
+              bruto={dados.total.entradas_bruto_centavos}
+              liquido={dados.total.entradas_liquido_centavos}
+              taxaBpUnica={null}
+            />
+          )}
         </div>
         <div className={b.divisor} />
         <div className={b.geralItem}>
@@ -160,7 +215,19 @@ export default function Balanco() {
                   <span className={b.tipoNome}>
                     {t.tipo_nome ?? 'Sem tipo'} <span className={b.tipoQtd}>{t.qtd}</span>
                   </span>
-                  <span className={b.tipoValor}>{brl(comTaxa ? t.liquido_centavos : t.bruto_centavos)}</span>
+                  <span className={b.tipoValorCol}>
+                    <span className={b.tipoValor}>{brl(comTaxa ? t.liquido_centavos : t.bruto_centavos)}</span>
+                    {/* Só nos tipos que têm taxa. Valor, não %: o tipo
+                        mistura formas/bancos com taxas diferentes. */}
+                    {comTaxa && (
+                      <TaxaGrupo
+                        bruto={t.bruto_centavos}
+                        liquido={t.liquido_centavos}
+                        taxaBpUnica={t.taxa_bp_unica}
+                        compacto
+                      />
+                    )}
+                  </span>
                 </button>
               ))
             )}
@@ -211,6 +278,18 @@ export default function Balanco() {
                 <span className={b.cardQtd}>{r.qtd_entradas} ent.</span>
               </div>
               <div className={b.linha}><span>Entradas</span><span>{brl(ent)}</span></div>
+              {/* Só quando a forma tem taxa. Débito/crédito de um banco só
+                  têm taxa única, então aqui a % costuma ser real. */}
+              {comTaxa && (
+                <div className={b.linhaNota}>
+                  <TaxaGrupo
+                    bruto={r.entradas_bruto_centavos}
+                    liquido={r.entradas_liquido_centavos}
+                    taxaBpUnica={r.taxa_bp_unica}
+                    compacto
+                  />
+                </div>
+              )}
               <div className={b.linha}><span>Saídas</span><span>{brl(r.saidas_centavos)}</span></div>
               <div className={b.linhaSaldo}>
                 <span>Saldo</span>
@@ -333,6 +412,12 @@ export default function Balanco() {
                           {m.detalhe ? ` · ${m.detalhe}` : ''}
                           {m.paciente_nome ? ` · ${m.paciente_nome}` : ''}
                         </span>
+
+                        {/* A taxa real desta entrada. Some nas que não têm
+                            (espécie, banco a 0%) — sem linha inútil. */}
+                        {m.kind === 'entrada' && comTaxa && m.liquido_centavos != null && (
+                          <TaxaDoItem bruto={m.valor_centavos} liquido={m.liquido_centavos} />
+                        )}
 
                         {/* Pagamento por %: abre a conta que gerou este valor.
                             Vem congelada do momento do pagamento, então bate

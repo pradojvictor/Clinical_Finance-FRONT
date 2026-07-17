@@ -11,11 +11,16 @@
 }
 @keyframes fade { from { opacity: 0; } }
 
+/* Largura: a tabela tem 6 colunas (paciente + 2 badges, data, valor e
+   três selects) e pede ~60rem só de conteúdo. Em 52rem ela rolava na
+   horizontal e o gestor conferia a planilha aos pedaços. 72rem cabe
+   inteira e ainda sobra margem no alvo do projeto (1360px = 85rem).
+   O `width: 100%` continua encolhendo em telas menores. */
 .modal {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 52rem;
+  max-width: 72rem;
   max-height: 92vh;
   background: var(--surface);
   border-radius: var(--radius-lg);
@@ -178,7 +183,8 @@
   background: var(--surface);
   font-size: var(--fs-md);
 }
-.selectCel { min-width: 6.5rem; }
+/* 6.5rem cortava nome de banco ("Banco do Brasil") e de profissional. */
+.selectCel { min-width: 8.5rem; }
 
 .badgeOk, .badgeNovo {
   flex: none;

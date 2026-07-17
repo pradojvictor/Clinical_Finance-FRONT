@@ -19,8 +19,9 @@ import {
   type SaidaDetalhe,
 } from '../lib/api'
 import { useAuth } from '../lib/auth'
-import { FORMA_LABEL, FORMAS_SAIDA, brl, dataBR, hojeISO, parseCentavos, periodoMes } from '../lib/format'
+import { FORMA_LABEL, FORMAS_SAIDA, brl, dataBR, dentroDaJanela, hojeISO, parseCentavos, periodoMes } from '../lib/format'
 import CalculoSalario from '../components/CalculoSalario'
+import ExcluirMovimentoModal from '../components/ExcluirMovimentoModal'
 import s from './page.module.css'
 import e from './Entradas.module.css'
 
@@ -38,6 +39,7 @@ export default function Saidas() {
   const [erro, setErro] = useState<string | null>(null)
   const [modal, setModal] = useState(false)
   const [editando, setEditando] = useState<SaidaDetalhe | null>(null)
+  const [excluindo, setExcluindo] = useState<SaidaDetalhe | null>(null)
   const { user } = useAuth()
   const soLeitura = user?.perfil === 'profissional'
 
@@ -118,7 +120,15 @@ export default function Saidas() {
                     <td className={s.num}>{brl(sd.valor_centavos)}</td>
                     <td className={s.num}>
                       {!soLeitura && (
-                        <button type="button" className={e.acaoLink} onClick={() => setEditando(sd)}>Editar</button>
+                        <div className={e.acoesCel}>
+                          <button type="button" className={e.acaoLink} onClick={() => setEditando(sd)}>Editar</button>
+                          {/* Excluir só nas primeiras 24h do registro. */}
+                          {dentroDaJanela(sd.criado_em) && (
+                            <button type="button" className={e.acaoPerigo} onClick={() => setExcluindo(sd)}>
+                              Excluir
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -153,6 +163,25 @@ export default function Saidas() {
           onClose={() => setEditando(null)}
           onSalvo={() => {
             setEditando(null)
+            carregar()
+          }}
+        />
+      )}
+
+      {excluindo && (
+        <ExcluirMovimentoModal
+          tipo="saída"
+          descricao={[excluindo.categoria_nome, excluindo.subcategoria_nome, excluindo.banco_nome]
+            .filter(Boolean)
+            .join(' · ')}
+          valorCentavos={excluindo.valor_centavos}
+          data={excluindo.data}
+          criadoEm={excluindo.criado_em}
+          aviso="Se for pagamento de profissional, o registro do salário no histórico dele some junto."
+          onExcluir={(senha) => saidasApi.excluir(excluindo.id, senha)}
+          onClose={() => setExcluindo(null)}
+          onExcluido={() => {
+            setExcluindo(null)
             carregar()
           }}
         />
