@@ -1,3 +1,4 @@
+/* Login — card flutuante dividido: marca de um lado, formulário do outro. */
 .page {
   min-height: 100vh;
   min-height: 100dvh;
@@ -12,35 +13,191 @@
 
 .card {
   width: 100%;
-  max-width: 23rem;
+  max-width: 58rem;
+  /* Duas colunas iguais. O overflow:hidden é o que faz a aurora respeitar
+     o canto arredondado do card. */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
   background: var(--surface);
   border: 0.0625rem solid var(--border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
-  padding: var(--sp-8) var(--sp-8) var(--sp-6);
+}
+
+/* ---- Lado da marca -------------------------------------------------- */
+.marca {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  padding: var(--sp-8);
+  min-height: 27rem;
+  background: var(--brand-navy);
+  color: var(--text-on-navy);
+  overflow: hidden;
+}
+
+/* ---- Névoa: cores da marca se misturando, como fumaça ---------------
+   Duas escolhas fazem o efeito e o desempenho ao mesmo tempo:
+
+   1) `mix-blend-mode: screen` — é o que faz as cores se MISTURAREM de
+      verdade onde as manchas se cruzam, em vez de uma tapar a outra.
+      Screen clareia: sobre o marinho, o encontro de duas manchas cria uma
+      terceira cor, como fumaça iluminada.
+
+   2) `radial-gradient` em vez de círculo + `filter: blur()`. O gradiente
+      já nasce difuso; o filtro teria que reprocessar o desfoque a cada
+      quadro, numa área grande. Assim só há composição — transform e
+      opacity, que a GPU resolve sem tocar no layout.
+
+   As manchas são maiores que o painel e passeiam para fora dele: nunca se
+   vê a borda de uma, só a cor entrando e saindo. */
+.aurora {
+  position: absolute;
+  /* Extrapola o painel: as manchas entram e saem sem mostrar o fim delas. */
+  inset: -40%;
+  z-index: -1;
+}
+.aurora span {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+/* Azul-aço — a mancha principal, a que mais aparece. */
+.brilho1 {
+  width: 70%;
+  height: 70%;
+  top: -5%;
+  left: -10%;
+  background: radial-gradient(circle at 50% 50%, rgba(111, 159, 196, 0.85) 0%, rgba(111, 159, 196, 0) 65%);
+  animation: fluir1 24s ease-in-out infinite;
+}
+/* Azul claro — cruza a principal e cria o terceiro tom no encontro. */
+.brilho2 {
+  width: 65%;
+  height: 65%;
+  right: -10%;
+  top: 20%;
+  background: radial-gradient(circle at 50% 50%, rgba(156, 192, 221, 0.7) 0%, rgba(156, 192, 221, 0) 62%);
+  animation: fluir2 31s ease-in-out infinite;
+}
+/* Cinza — esfria a mistura por baixo, dá o ar de fumaça. */
+.brilho3 {
+  width: 60%;
+  height: 60%;
+  bottom: -8%;
+  left: 15%;
+  background: radial-gradient(circle at 50% 50%, rgba(192, 196, 204, 0.45) 0%, rgba(192, 196, 204, 0) 60%);
+  animation: fluir3 27s ease-in-out infinite;
+}
+/* Marinho claro — cria o vazio entre as outras, o "vinco" da fumaça. */
+.brilho4 {
+  width: 55%;
+  height: 55%;
+  top: 45%;
+  left: -5%;
+  background: radial-gradient(circle at 50% 50%, rgba(44, 52, 98, 0.9) 0%, rgba(44, 52, 98, 0) 60%);
+  animation: fluir4 35s ease-in-out infinite;
+}
+/* Azul-aço de novo, menor e mais rápida: quebra o compasso das grandes. */
+.brilho5 {
+  width: 45%;
+  height: 45%;
+  top: 10%;
+  right: 15%;
+  background: radial-gradient(circle at 50% 50%, rgba(111, 159, 196, 0.55) 0%, rgba(111, 159, 196, 0) 58%);
+  animation: fluir5 19s ease-in-out infinite;
+}
+
+/* Cada uma com percurso, giro e tempo próprios — e os tempos são primos
+   entre si (24, 31, 27, 35, 19), então o conjunto leva horas para repetir
+   a mesma composição. É isso que tira a cara de "loop". */
+@keyframes fluir1 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+  33%      { transform: translate3d(28%, 18%, 0) scale(1.25) rotate(50deg); }
+  66%      { transform: translate3d(10%, 34%, 0) scale(0.9) rotate(-30deg); }
+}
+@keyframes fluir2 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.1) rotate(0deg); }
+  40%      { transform: translate3d(-34%, 22%, 0) scale(0.85) rotate(-60deg); }
+  70%      { transform: translate3d(-16%, -20%, 0) scale(1.3) rotate(35deg); }
+}
+@keyframes fluir3 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+  50%      { transform: translate3d(30%, -26%, 0) scale(1.35) rotate(70deg); }
+}
+@keyframes fluir4 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.15) rotate(0deg); }
+  45%      { transform: translate3d(38%, -30%, 0) scale(0.8) rotate(-45deg); }
+  75%      { transform: translate3d(12%, 16%, 0) scale(1.2) rotate(25deg); }
+}
+@keyframes fluir5 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(0.9); }
+  50%      { transform: translate3d(-24%, 30%, 0) scale(1.4); }
+}
+
+.marcaTopo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+/* Selo claro atrás do símbolo. Não é enfeite: o símbolo tem uma parte em
+   marinho (#191D37) que ficaria invisível sobre o fundo marinho do card. */
+.marcaSelo {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+}
+/* O selo voltou ao tamanho original; só o símbolo cresceu dentro dele,
+   ocupando mais da área branca (folga de ~0.3rem em vez de 0.5rem). */
+.marcaSelo img {
+  width: 2.15rem;
+  height: 2.15rem;
+  object-fit: contain;
+}
+.marcaNome {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}
+.marcaFrase {
+  font-size: var(--fs-2xl, 1.75rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+/* ---- Lado do formulário --------------------------------------------- */
+.lado {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
+  padding: var(--sp-8);
+  justify-content: center;
 }
-
-.logo {
-  height: 2.5rem;
-  width: auto;
-  object-fit: contain;
-  align-self: center;
-  margin-bottom: var(--sp-1);
+.cabecalho {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: var(--sp-2);
 }
 .title {
   font-size: var(--fs-xl);
   font-weight: 700;
-  text-align: center;
   color: var(--text);
 }
 .subtitle {
   font-size: var(--fs-sm);
   color: var(--text-muted);
-  text-align: center;
-  margin-top: -0.625rem;
 }
 
 .field {
@@ -98,14 +255,14 @@
   margin-top: var(--sp-2);
   padding: 0.75rem;
   border-radius: var(--radius-md);
-  background: var(--brand-blue);
+  background: var(--brand-navy);
   color: #ffffff;
   font-weight: 700;
   font-size: var(--fs-md);
   transition: background 0.15s ease;
 }
 .submit:hover:not(:disabled) {
-  background: var(--brand-blue-600);
+  background: var(--brand-navy-700);
 }
 .submit:disabled {
   opacity: 0.7;
@@ -126,4 +283,29 @@
   font-size: var(--fs-xs);
   color: var(--text-soft);
   margin-top: var(--sp-1);
+}
+
+/* Tela estreita: o lado da marca vira uma faixa curta no topo, e o
+   formulário continua legível em vez de espremer em duas colunas. */
+@media (max-width: 52rem) {
+  .card {
+    grid-template-columns: 1fr;
+    max-width: 26rem;
+  }
+  .marca {
+    min-height: 0;
+    gap: var(--sp-4);
+    padding: var(--sp-6);
+  }
+  .marcaFrase {
+    font-size: var(--fs-lg);
+  }
+}
+
+/* Quem pede menos movimento no sistema não recebe a aurora animada —
+   as luzes continuam, paradas. */
+@media (prefers-reduced-motion: reduce) {
+  .aurora span {
+    animation: none;
+  }
 }
