@@ -10,17 +10,16 @@ import {
   auditoriaApi,
   bancosApi,
   categoriasSaidaApi,
-  categoriasProfissionalApi,
   profissionaisApi,
   taxasApi,
   tiposEntradaApi,
   subtiposEntradaApi,
   usuariosApi,
   type Banco,
-  type CategoriaProfissional,
   type CategoriaSaida,
   type Forma,
   type NovoProfissional,
+  type ItemFixo,
   type Profissional,
   type PagamentoProfissional,
   type NivelCategoriaSaida,
@@ -69,7 +68,7 @@ function msg(e: unknown): string {
 const fmtPct = (bp: number) => String(bp / 100).replace('.', ',')
 
 export default function Admin() {
-  const [aba, setAba] = useState<Aba>('bancos')
+  const [aba, setAba] = useState<Aba>('usuarios')
   return (
     <div className={s.stack}>
       <div className={a.tabs} role="tablist">
@@ -419,7 +418,7 @@ function SubtiposDeTipo({
   )
 }
 
-/* ---- Registro de profissional (categorias + fichas) --------------- */
+/* ---- Registro de profissional (fichas) ---------------------------- */
 /** "12,5" -> 1250 pontos-base. null se inválido/vazio. */
 function pctParaBp(v: string): number | null {
   const n = Number(v.replace(',', '.'))
@@ -430,21 +429,17 @@ const fmtCpf = (c: string | null) =>
   c && c.length === 11 ? `${c.slice(0, 3)}.${c.slice(3, 6)}.${c.slice(6, 9)}-${c.slice(9)}` : (c ?? '—')
 
 function RegistroProfissionalPanel() {
-  const [cats, setCats] = useState<CategoriaProfissional[]>([])
   const [fichas, setFichas] = useState<Profissional[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [modal, setModal] = useState<{ ficha?: Profissional } | null>(null)
 
   const carregar = () => {
-    categoriasProfissionalApi.listar().then((r) => setCats(r.categorias)).catch(() => {})
     profissionaisApi.listar().then((r) => setFichas(r.profissionais)).catch((x) => setErro(msg(x)))
   }
   useEffect(carregar, [])
 
   return (
     <div className={s.stack}>
-      <CategoriasProfissionalCard cats={cats} onErro={setErro} onChange={carregar} />
-
       <Card
         title="Profissionais"
         action={
@@ -477,7 +472,6 @@ function RegistroProfissionalPanel() {
       {modal && (
         <ProfissionalModal
           ficha={modal.ficha}
-          cats={cats}
           onClose={() => setModal(null)}
           onSalvo={() => {
             setModal(null)
@@ -486,89 +480,6 @@ function RegistroProfissionalPanel() {
         />
       )}
     </div>
-  )
-}
-
-function CategoriasProfissionalCard({
-  cats,
-  onErro,
-  onChange,
-}: {
-  cats: CategoriaProfissional[]
-  onErro: (m: string | null) => void
-  onChange: () => void
-}) {
-  const [novo, setNovo] = useState('')
-  const [salvando, setSalvando] = useState(false)
-
-  const adicionar = async (ev: FormEvent) => {
-    ev.preventDefault()
-    if (!novo.trim()) return
-    setSalvando(true)
-    onErro(null)
-    try {
-      await categoriasProfissionalApi.criar(novo.trim())
-      setNovo('')
-      onChange()
-    } catch (x) {
-      onErro(msg(x))
-    } finally {
-      setSalvando(false)
-    }
-  }
-  const toggle = async (c: CategoriaProfissional) => {
-    onErro(null)
-    try {
-      await categoriasProfissionalApi.atualizar(c.id, { ativo: !c.ativo })
-      onChange()
-    } catch (x) {
-      onErro(msg(x))
-    }
-  }
-  const excluir = async (c: CategoriaProfissional) => {
-    if (!window.confirm(`Excluir a categoria "${c.nome}"?`)) return
-    onErro(null)
-    try {
-      await categoriasProfissionalApi.excluir(c.id)
-      onChange()
-    } catch (x) {
-      onErro(msg(x))
-    }
-  }
-
-  return (
-    <Card title="Categorias de profissional" action={<Badge tone="neutral">{cats.length}</Badge>}>
-      <form className={a.addRow} onSubmit={adicionar}>
-        <input
-          className={s.input}
-          value={novo}
-          onChange={(e) => setNovo(e.target.value)}
-          placeholder="ex.: Psiquiatra, Psicólogo, Fisioterapeuta…"
-          maxLength={80}
-        />
-        <button type="submit" className={`${s.btn} ${s.btnPrimary}`} disabled={salvando}>
-          <Icon name="entrada" size={16} /> Adicionar
-        </button>
-      </form>
-      {cats.length === 0 ? (
-        <p className={a.nota}>Nenhuma categoria ainda.</p>
-      ) : (
-        <ul className={a.lista}>
-          {cats.map((c) => (
-            <li key={c.id} className={a.item}>
-              <span className={a.itemNome}>{c.nome}</span>
-              <Badge tone={c.ativo ? 'success' : 'neutral'}>{c.ativo ? 'ativo' : 'inativo'}</Badge>
-              <button type="button" className={a.linkBtn} onClick={() => toggle(c)}>
-                {c.ativo ? 'Desativar' : 'Ativar'}
-              </button>
-              <button type="button" className={a.linkDanger} onClick={() => excluir(c)}>
-                Excluir
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
   )
 }
 
@@ -583,9 +494,6 @@ function FichaProfissional({
   onErro: (m: string | null) => void
   onChange: () => void
 }) {
-  const [valeNome, setValeNome] = useState('')
-  const [valeTipo, setValeTipo] = useState<'percentual' | 'valor'>('valor')
-  const [valeVal, setValeVal] = useState('')
   // Histórico de salários recebidos (carrega sob demanda).
   const [hist, setHist] = useState<PagamentoProfissional[] | null>(null)
   const [verHist, setVerHist] = useState(false)
@@ -601,36 +509,6 @@ function FichaProfissional({
     }
   }
 
-  const addVale = async (ev: FormEvent) => {
-    ev.preventDefault()
-    onErro(null)
-    if (!valeNome.trim()) return
-    try {
-      if (valeTipo === 'percentual') {
-        const bp = pctParaBp(valeVal)
-        if (bp == null) return onErro('Porcentagem do vale deve ficar entre 0 e 100.')
-        await profissionaisApi.criarVale({ profissional_id: ficha.id, nome: valeNome.trim(), percentual_bp: bp })
-      } else {
-        const c = parseCentavos(valeVal)
-        if (c <= 0) return onErro('Informe um valor válido para o vale.')
-        await profissionaisApi.criarVale({ profissional_id: ficha.id, nome: valeNome.trim(), valor_centavos: c })
-      }
-      setValeNome('')
-      setValeVal('')
-      onChange()
-    } catch (x) {
-      onErro(msg(x))
-    }
-  }
-  const delVale = async (id: number) => {
-    onErro(null)
-    try {
-      await profissionaisApi.excluirVale(id)
-      onChange()
-    } catch (x) {
-      onErro(msg(x))
-    }
-  }
   const toggle = async () => {
     onErro(null)
     try {
@@ -662,7 +540,7 @@ function FichaProfissional({
     <div className={a.central}>
       <div className={a.centralHead}>
         <span className={a.centralNome}>{ficha.nome}</span>
-        {ficha.categoria_nome && <Badge tone="blue">{ficha.categoria_nome}</Badge>}
+        {ficha.profissao && <Badge tone="blue">{ficha.profissao}</Badge>}
         <Badge tone={ficha.percentual_bp != null ? 'success' : 'neutral'}>{remuneracao}</Badge>
         {!ficha.ativo && <Badge tone="neutral">inativo</Badge>}
         <span className={a.acoesCat}>
@@ -678,49 +556,16 @@ function FichaProfissional({
         <p className={a.hint}>
           CPF: {fmtCpf(ficha.cpf)}
           {ficha.endereco ? ` · ${ficha.endereco}` : ''}
-          {ficha.beneficios ? ` · Benefícios: ${ficha.beneficios}` : ''}
         </p>
 
-        {ficha.vales.map((v) => (
-          <div key={v.id} className={a.subItem}>
-            <span className={a.subNome}>{v.nome}</span>
-            <Badge tone="neutral">
-              {v.percentual_bp != null ? `${fmtPct(v.percentual_bp)}% do salário` : brl(v.valor_centavos ?? 0)}
-            </Badge>
-            <span className={a.acoesCat}>
-              <button type="button" className={a.linkDanger} onClick={() => delVale(v.id)}>Excluir</button>
-            </span>
+        {/* A lista é definida no cadastro (botão Editar). */}
+        {ficha.vales.length > 0 && (
+          <div className={a.subItem} style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
+            {ficha.vales.map((v) => (
+              <Badge key={v.id} tone="neutral">{v.nome}: {brl(v.valor_centavos)}</Badge>
+            ))}
           </div>
-        ))}
-
-        <form className={a.addInline} onSubmit={addVale}>
-          <input
-            className={a.addInput}
-            style={{ maxWidth: '12rem' }}
-            value={valeNome}
-            onChange={(e) => setValeNome(e.target.value)}
-            placeholder="Vale/auxílio (ex.: VR)"
-            maxLength={80}
-          />
-          <select
-            className={a.addInput}
-            style={{ maxWidth: '8rem' }}
-            value={valeTipo}
-            onChange={(e) => setValeTipo(e.target.value as 'percentual' | 'valor')}
-          >
-            <option value="valor">Valor</option>
-            <option value="percentual">% do salário</option>
-          </select>
-          <input
-            className={a.addInput}
-            style={{ maxWidth: '7rem' }}
-            value={valeVal}
-            onChange={(e) => setValeVal(e.target.value)}
-            placeholder={valeTipo === 'percentual' ? '0,00 %' : 'R$ 0,00'}
-            inputMode="decimal"
-          />
-          <button type="submit" className={a.miniBtn}>Adicionar</button>
-        </form>
+        )}
 
         {/* Histórico de salários recebidos (vem das saídas registradas) */}
         <button type="button" className={a.addCat} onClick={abrirHist}>
@@ -736,9 +581,9 @@ function FichaProfissional({
               <div key={p.id} className={a.subItem}>
                 <span className={a.subNome}>{dataBR(p.data)}</span>
                 <strong>{brl(p.valor_centavos)}</strong>
-                {p.percentual_bp != null && p.base_liquido_centavos != null && (
+                {p.percentual_bp != null && p.base_bruto_centavos != null && (
                   <Badge tone="neutral">
-                    {fmtPct(p.percentual_bp)}% de {brl(p.base_liquido_centavos)}
+                    {fmtPct(p.percentual_bp)}% de {brl(p.base_bruto_centavos)} (bruto)
                     {p.periodo_de && p.periodo_ate ? ` · ${dataBR(p.periodo_de)}–${dataBR(p.periodo_ate)}` : ''}
                   </Badge>
                 )}
@@ -753,19 +598,17 @@ function FichaProfissional({
 /* Modal: nova/editar ficha do profissional. */
 function ProfissionalModal({
   ficha,
-  cats,
   onClose,
   onSalvo,
 }: {
   ficha?: Profissional
-  cats: CategoriaProfissional[]
   onClose: () => void
   onSalvo: () => void
 }) {
   const editando = !!ficha
   const [nome, setNome] = useState(ficha?.nome ?? '')
   const [cpf, setCpf] = useState(ficha?.cpf ?? '')
-  const [categoriaId, setCategoriaId] = useState(ficha?.categoria_id ? String(ficha.categoria_id) : '')
+  const [profissao, setProfissao] = useState(ficha?.profissao ?? '')
   const [modo, setModo] = useState<'salario' | 'percentual'>(
     ficha?.percentual_bp != null ? 'percentual' : 'salario',
   )
@@ -774,7 +617,11 @@ function ProfissionalModal({
   )
   const [pct, setPct] = useState(ficha?.percentual_bp != null ? fmtPct(ficha.percentual_bp) : '')
   const [endereco, setEndereco] = useState(ficha?.endereco ?? '')
-  const [beneficios, setBeneficios] = useState(ficha?.beneficios ?? '')
+  // A lista vive aqui até o salvar: é criada JUNTO com a ficha, numa
+  // transação só. Não é obrigatória — pode ficar vazia.
+  const [vales, setVales] = useState<ItemFixo[]>(
+    ficha?.vales.map((v) => ({ nome: v.nome, valor_centavos: v.valor_centavos })) ?? [],
+  )
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
@@ -799,9 +646,9 @@ function ProfissionalModal({
     const dados: NovoProfissional = {
       nome: nome.trim(),
       cpf: digitos || null,
-      categoria_id: categoriaId ? Number(categoriaId) : null,
+      profissao: profissao.trim() || null,
       endereco: endereco.trim() || null,
-      beneficios: beneficios.trim() || null,
+      vales,
     }
     if (modo === 'percentual') {
       const bp = pctParaBp(pct)
@@ -852,13 +699,14 @@ function ProfissionalModal({
               <input className={e.input} value={cpf} onChange={(ev) => setCpf(ev.target.value)} inputMode="numeric" />
             </label>
             <label className={e.campo}>
-              <span className={e.label}>Categoria</span>
-              <select className={e.input} value={categoriaId} onChange={(ev) => setCategoriaId(ev.target.value)}>
-                <option value="">Sem categoria</option>
-                {cats.filter((c) => c.ativo).map((c) => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
-              </select>
+              <span className={e.label}>Profissão</span>
+              <input
+                className={e.input}
+                value={profissao}
+                onChange={(ev) => setProfissao(ev.target.value)}
+                placeholder="ex.: psiquiatra"
+                maxLength={80}
+              />
             </label>
           </div>
 
@@ -903,19 +751,20 @@ function ProfissionalModal({
             <input className={e.input} value={endereco} onChange={(ev) => setEndereco(ev.target.value)} maxLength={300} />
           </label>
 
-          <label className={e.campo}>
-            <span className={e.label}>Benefícios (opcional)</span>
-            <input
-              className={e.input}
-              value={beneficios}
-              onChange={(ev) => setBeneficios(ev.target.value)}
-              placeholder="ex.: Plano de saúde, odontológico"
-              maxLength={500}
-            />
-          </label>
+          <ListaItensFixos
+            titulo="Vales / auxílios / benefícios"
+            dica="Valores fixos. Adicione quantos precisar — ou nenhum."
+            placeholder="ex.: vale transporte"
+            itens={vales}
+            onChange={setVales}
+          />
 
           <div className={e.rodape}>
-            <span className={e.dataNota}>Vales/auxílios são adicionados na ficha, depois de salvar.</span>
+            <span className={e.dataNota}>
+              {vales.length === 0
+                ? 'Vales / auxílios / benefícios são opcionais.'
+                : `${vales.length} item(ns) serão salvos com a ficha.`}
+            </span>
             <button type="submit" className={e.submit} disabled={enviando}>
               {enviando ? 'Salvando…' : editando ? 'Salvar' : 'Criar ficha'}
             </button>
@@ -924,6 +773,90 @@ function ProfissionalModal({
       </div>
     </div>,
     document.body,
+  )
+}
+
+/** Lista editável de vales/auxílios/benefícios (nome + valor). O gestor
+    decide se tem, quantos, o nome e o valor de cada.
+
+    Não usa <form>: isto vive DENTRO do form do modal, e form aninhado é
+    HTML inválido. Por isso o botão é type="button" e o Enter é tratado à
+    mão — solto, ele submeteria o modal e criaria a ficha antes da hora. */
+function ListaItensFixos({
+  titulo,
+  dica,
+  placeholder,
+  itens,
+  onChange,
+}: {
+  titulo: string
+  dica: string
+  placeholder: string
+  itens: ItemFixo[]
+  onChange: (itens: ItemFixo[]) => void
+}) {
+  const [nome, setNome] = useState('')
+  const [valor, setValor] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
+
+  const adicionar = () => {
+    const centavos = parseCentavos(valor)
+    if (!nome.trim() || centavos <= 0) {
+      setErro('Informe o nome e o valor.')
+      return
+    }
+    setErro(null)
+    onChange([...itens, { nome: nome.trim(), valor_centavos: centavos }])
+    setNome('')
+    setValor('')
+  }
+
+  return (
+    <div className={e.campo}>
+      <span className={e.label}>{titulo}</span>
+
+      {itens.map((it, i) => (
+        <div key={`${it.nome}-${i}`} className={a.subItem}>
+          <span className={a.subNome}>{it.nome}</span>
+          <Badge tone="neutral">{brl(it.valor_centavos)}</Badge>
+          <span className={a.acoesCat}>
+            <button
+              type="button"
+              className={a.linkDanger}
+              onClick={() => onChange(itens.filter((_, j) => j !== i))}
+            >
+              Remover
+            </button>
+          </span>
+        </div>
+      ))}
+
+      <div className={a.addInline}>
+        <input
+          className={a.addInput}
+          style={{ maxWidth: '12rem' }}
+          value={nome}
+          onChange={(ev) => setNome(ev.target.value)}
+          onKeyDown={(ev) => ev.key === 'Enter' && (ev.preventDefault(), adicionar())}
+          placeholder={placeholder}
+          maxLength={80}
+        />
+        <input
+          className={a.addInput}
+          style={{ maxWidth: '7rem' }}
+          value={valor}
+          onChange={(ev) => setValor(ev.target.value)}
+          onKeyDown={(ev) => ev.key === 'Enter' && (ev.preventDefault(), adicionar())}
+          placeholder="R$ 0,00"
+          inputMode="decimal"
+        />
+        <button type="button" className={a.miniBtn} onClick={adicionar}>
+          Adicionar
+        </button>
+      </div>
+
+      {erro ? <span className={a.hint}>{erro}</span> : <span className={a.hint}>{dica}</span>}
+    </div>
   )
 }
 

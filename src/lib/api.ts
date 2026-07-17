@@ -415,6 +415,12 @@ export interface MovimentoBalanco {
   grupo_id: number | null
   origem_id: number | null
   destino_id: number | null
+  /** Saída que é pagamento por %: a conta congelada. Null nos demais. */
+  pg_percentual_bp: number | null
+  pg_bruto_centavos: number | null
+  pg_taxa_centavos: number | null
+  pg_periodo_de: string | null
+  pg_periodo_ate: string | null
 }
 export interface ResumoTransferencia {
   origem_id: number | null
@@ -440,55 +446,42 @@ export const balancoApi = {
 }
 
 // ---- Profissionais (ficha de RH, sem login) -----------------------
-export interface CategoriaProfissional {
-  id: number
-  nome: string
-  ativo: boolean
-}
+/** Vale, auxílio ou benefício — lista única de nome + valor fixo. */
 export interface ValeProfissional {
   id: number
   profissional_id: number
   nome: string
-  percentual_bp: number | null
-  valor_centavos: number | null
-  ativo: boolean
+  valor_centavos: number
 }
 export interface Profissional {
   id: number
   nome: string
   cpf: string | null
-  categoria_id: number | null
-  categoria_nome: string | null
+  /** Texto livre (ex.: psiquiatra). Substituiu a lista de categorias. */
+  profissao: string | null
   /** Vazio quando a remuneração é por % das entradas. */
   salario_centavos: number | null
   percentual_bp: number | null
   endereco: string | null
-  beneficios: string | null
   ativo: boolean
+  /** Vales, auxílios e benefícios (lista única). */
   vales: ValeProfissional[]
+}
+/** Item da lista de vales/auxílios/benefícios: nome + valor fixo.
+    Não é obrigatório — a ficha pode ser cadastrada sem nenhum. */
+export interface ItemFixo {
+  nome: string
+  valor_centavos: number
 }
 export interface NovoProfissional {
   nome: string
   cpf?: string | null
-  categoria_id?: number | null
+  profissao?: string | null
   salario_centavos?: number | null
   percentual_bp?: number | null
   endereco?: string | null
-  beneficios?: string | null
-}
-export const categoriasProfissionalApi = {
-  listar: () => req<{ categorias: CategoriaProfissional[] }>('/categorias-profissional'),
-  criar: (nome: string) =>
-    req<{ categoria: CategoriaProfissional }>('/categorias-profissional', {
-      method: 'POST',
-      body: JSON.stringify({ nome }),
-    }),
-  atualizar: (id: number, dados: Partial<{ nome: string; ativo: boolean }>) =>
-    req<{ categoria: CategoriaProfissional }>(`/categorias-profissional/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(dados),
-    }),
-  excluir: (id: number) => req<{ ok: boolean }>(`/categorias-profissional/${id}`, { method: 'DELETE' }),
+  /** Criados junto com a ficha. Na edição, substituem a lista atual. */
+  vales?: ItemFixo[]
 }
 /** Um salário recebido — a base fica congelada no momento do pagamento. */
 export interface PagamentoProfissional {
@@ -498,7 +491,8 @@ export interface PagamentoProfissional {
   data: string
   valor_centavos: number
   percentual_bp: number | null
-  base_liquido_centavos: number | null
+  base_bruto_centavos: number | null
+  taxa_centavos: number | null
   periodo_de: string | null
   periodo_ate: string | null
 }
@@ -510,7 +504,7 @@ export const profissionaisApi = {
   atualizar: (id: number, dados: Partial<NovoProfissional & { ativo: boolean }>) =>
     req<{ profissional: Profissional }>(`/profissionais/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }),
   excluir: (id: number) => req<{ ok: boolean }>(`/profissionais/${id}`, { method: 'DELETE' }),
-  criarVale: (dados: { profissional_id: number; nome: string; percentual_bp?: number; valor_centavos?: number }) =>
+  criarVale: (dados: { profissional_id: number; nome: string; valor_centavos: number }) =>
     req<{ vale: ValeProfissional }>('/profissionais/vales', { method: 'POST', body: JSON.stringify(dados) }),
   excluirVale: (id: number) => req<{ ok: boolean }>(`/profissionais/vales/${id}`, { method: 'DELETE' }),
   /** Base do pagamento: % da ficha × líquido das entradas dele no período. */
@@ -520,15 +514,23 @@ export const profissionaisApi = {
 
 // ---- Base do pagamento (% das entradas do profissional) -----------
 // A % mora na ficha (profissionais.percentual_bp).
+/** A conta do pagamento por porcentagem. A % incide sobre o BRUTO; o que
+    sobra cobre a taxa da máquina e o resto fica com a clínica. */
 export interface BaseSalario {
   profissional_id: number
   profissional_nome: string
   de: string
   ate: string
   qtd_entradas: number
-  entradas_liquido_centavos: number
+  /** Soma cheia das entradas do período — a base do cálculo. */
+  entradas_bruto_centavos: number
+  /** Taxa das máquinas no período. */
+  taxa_centavos: number
   percentual_bp: number
+  /** bruto × percentual — o que o profissional leva. */
   valor_centavos: number
+  /** bruto − valor − taxa — o que fica na clínica. */
+  clinica_centavos: number
 }
 
 // ---- Usuários (administração) -------------------------------------

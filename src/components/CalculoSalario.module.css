@@ -1,0 +1,64 @@
+/* Demonstrativo do pagamento por porcentagem. Usado na tela de Saídas
+   (antes de registrar) e no Balanço (depois), com os mesmos números. */
+.box {
+  display: grid;
+  gap: 0.25rem;
+  padding: var(--sp-3);
+  border: 1px solid var(--borda);
+  border-radius: var(--radius-md);
+  background: var(--surface-2, var(--bg));
+  font-size: var(--fs-sm);
+}
+
+.titulo {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.15rem;
+}
+
+.linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-4);
+  color: var(--text-muted);
+}
+
+/* Tabular para os valores alinharem na vírgula. */
+.valor {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sai {
+  color: var(--danger);
+}
+
+/* O que sobra: separado por um traço, como num demonstrativo de papel. */
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-4);
+  margin-top: 0.25rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--borda);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.nota {
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: var(--fs-xs, 0.75rem);
+}
+
+/* Quando a conta não fecha, é bug — e tem que aparecer, não sumir. */
+.alerta {
+  margin-top: 0.3rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: var(--fs-xs, 0.75rem);
+}

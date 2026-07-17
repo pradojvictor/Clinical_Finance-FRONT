@@ -433,3 +433,8 @@
 @media (max-width: 48rem) {
   .tipos { grid-template-columns: 1fr; }
 }
+
+/* Demonstrativo do pagamento por % dentro do movimento da gaveta. */
+.movCalc {
+  margin-top: var(--sp-2);
+}

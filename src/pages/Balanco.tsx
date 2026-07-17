@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { ApiError, balancoApi, saldosApi, type Balanco as BalancoT, type Forma, type ResumoForma, type SaldoLocal } from '../lib/api'
 import { FORMA_LABEL, brl, dataBR, periodoAno, periodoMes } from '../lib/format'
+import CalculoSalario from '../components/CalculoSalario'
 import SeletorMesAno from '../components/ui/SeletorMesAno'
 import s from './page.module.css'
 import b from './Balanco.module.css'
@@ -332,6 +333,22 @@ export default function Balanco() {
                           {m.detalhe ? ` · ${m.detalhe}` : ''}
                           {m.paciente_nome ? ` · ${m.paciente_nome}` : ''}
                         </span>
+
+                        {/* Pagamento por %: abre a conta que gerou este valor.
+                            Vem congelada do momento do pagamento, então bate
+                            com o que foi mostrado na hora de registrar. */}
+                        {m.pg_percentual_bp != null && m.pg_bruto_centavos != null && (
+                          <div className={b.movCalc}>
+                            <CalculoSalario
+                              bruto={m.pg_bruto_centavos}
+                              taxa={m.pg_taxa_centavos ?? 0}
+                              percentualBp={m.pg_percentual_bp}
+                              valor={m.valor_centavos}
+                              de={m.pg_periodo_de}
+                              ate={m.pg_periodo_ate}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))

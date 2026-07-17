@@ -20,6 +20,7 @@ import {
 } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { FORMA_LABEL, FORMAS_SAIDA, brl, dataBR, hojeISO, parseCentavos, periodoMes } from '../lib/format'
+import CalculoSalario from '../components/CalculoSalario'
 import s from './page.module.css'
 import e from './Entradas.module.css'
 
@@ -368,19 +369,28 @@ function NovaSaidaModal({ onClose, onSalvo }: { onClose: () => void; onSalvo: ()
                   <input className={e.input} type="date" value={calcAte} onChange={(ev) => setCalcAte(ev.target.value)} />
                 </label>
               </div>
-              {base && (
-                <div className={e.taxaBox}>
-                  {base.percentual_bp > 0 ? (
+              {base &&
+                (base.percentual_bp > 0 ? (
+                  // O gestor vê a conta inteira ANTES de registrar: de onde
+                  // saiu o valor, quanto foi de máquina e o que sobra.
+                  <CalculoSalario
+                    bruto={base.entradas_bruto_centavos}
+                    taxa={base.taxa_centavos}
+                    percentualBp={base.percentual_bp}
+                    valor={base.valor_centavos}
+                    qtdEntradas={base.qtd_entradas}
+                    de={base.de}
+                    ate={base.ate}
+                    titulo={`Cálculo de ${base.profissional_nome}`}
+                  />
+                ) : (
+                  <div className={e.taxaBox}>
                     <span>
-                      {base.qtd_entradas} entrada(s) · líquido {brl(base.entradas_liquido_centavos)} ×{' '}
-                      {String(base.percentual_bp / 100).replace('.', ',')}% ={' '}
-                      <strong>{brl(base.valor_centavos)}</strong>
+                      Sem porcentagem para {base.profissional_nome} — defina em Admin →
+                      Registro de profissional.
                     </span>
-                  ) : (
-                    <span>Sem porcentagem para {base.profissional_nome} — defina em Admin → Salários.</span>
-                  )}
-                </div>
-              )}
+                  </div>
+                ))}
             </>
           )}
 
