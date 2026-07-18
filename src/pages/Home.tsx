@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Lenis from 'lenis'
 import 'lenis/dist/lenis.css'
 import Navbar from '../components/Navbar'
 import ProcedimentosSecao from '../components/ProcedimentosSecao'
-import childrenGif from '../assets/children.gif'
+// Vídeo H.264 gerado a partir do children.gif original (15,2 MB): mesmo
+// visual, ~1,7 MB. O poster (1º quadro, JPEG) pinta o hero na hora enquanto
+// o vídeo baixa. O .gif original continua no repositório, mas não é mais
+// importado — portanto não entra no build.
+import childrenVideo from '../assets/children.mp4'
+import childrenPoster from '../assets/children-poster.jpg'
 import logoLoader from '../assets/logoloading.svg'
 import styles from './Home.module.css'
 
@@ -44,12 +49,18 @@ const SERVICOS = [
 export default function Home() {
   const [tone, setTone] = useState<'light' | 'dark'>('light')
   const [isLoading, setIsLoading] = useState(true)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   // 👇 Adicionamos este estado para controlar os blocos do scroll
   const [isSectionVisible, setIsSectionVisible] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 2000)
+
+    // Alguns navegadores ignoram o atributo autoplay em vídeo montado via
+    // JS — um play() explícito garante; se a política bloquear, o poster
+    // (1º quadro) fica no lugar sem erro no console.
+    videoRef.current?.play().catch(() => {})
 
     const de = document.documentElement
     const prevBehavior = de.style.scrollBehavior
@@ -84,6 +95,9 @@ export default function Home() {
     const palavras = proxima
       ? Array.from(proxima.querySelectorAll<HTMLElement>('[data-palavra]'))
       : []
+    // Só reescreve os estilos quando a CONTAGEM de palavras acesas muda —
+    // no meio do scroll a conta dá o mesmo n dezenas de vezes seguidas.
+    let palavrasAcesas = -1
     const revelarTexto = () => {
       if (!proxima || palavras.length === 0) return
       const vh = window.innerHeight
@@ -92,6 +106,8 @@ export default function Home() {
       const top = proxima.getBoundingClientRect().top
       const p = clamp((inicio - top) / (inicio - fim), 0, 1)
       const n = Math.round(p * palavras.length)
+      if (n === palavrasAcesas) return
+      palavrasAcesas = n
       palavras.forEach((w, i) => {
         const on = i < n
         w.style.opacity = on ? '1' : ''
@@ -117,11 +133,16 @@ export default function Home() {
     const svProgress = servico?.querySelector<HTMLElement>('[data-servico-progress]') ?? null
     const N = svItens.length
 
+    // Fora da tela, nada é recalculado nem escrito — o trabalho pesado desta
+    // sequência (20+ estilos por quadro) só roda com a seção visível.
+    let contadorTexto = ''
     const atualizarServicos = () => {
       if (!servico || N === 0) return
       const vh = window.innerHeight
+      const rs = servico.getBoundingClientRect()
+      if (rs.bottom < -vh * 0.2 || rs.top > vh * 1.2) return
       const total = servico.offsetHeight - vh
-      const p = clamp(-servico.getBoundingClientRect().top / total, 0, 1)
+      const p = clamp(-rs.top / total, 0, 1)
       const segs = N + 1 // 6 serviços + visão geral
       const seg = 1 / segs
       const overviewInicio = N * seg
@@ -159,10 +180,15 @@ export default function Home() {
         svLogo.style.opacity = ((0.36 - lp * 0.18) * fade).toFixed(3)
       }
 
-      // Barra de progresso + contador (fase dos textos).
+      // Barra de progresso + contador (fase dos textos). O contador só toca
+      // o DOM quando o número exibido de fato muda.
       const pTextos = clamp(p / overviewInicio, 0, 1)
       if (svBar) svBar.style.transform = `scaleX(${pTextos.toFixed(4)})`
-      if (svCounter) svCounter.textContent = String(Math.min(N, Math.floor(p / seg) + 1)).padStart(2, '0')
+      const contador = String(Math.min(N, Math.floor(p / seg) + 1)).padStart(2, '0')
+      if (svCounter && contador !== contadorTexto) {
+        svCounter.textContent = contador
+        contadorTexto = contador
+      }
 
       // Visão geral: some o palco/logo, entram os cards com stagger.
       const ov = clamp((p - overviewInicio) / seg, 0, 1)
@@ -210,14 +236,15 @@ export default function Home() {
     )
     secoes.forEach((s) => io.observe(s))
 
-    window.addEventListener('scroll', atualizar, { passive: true })
+    // Sem listener extra de scroll no window: o Lenis re-emite TODO scroll
+    // (inclusive o nativo) no próprio 'scroll' — um segundo listener só
+    // fazia o mesmo trabalho duas vezes por quadro.
 
     return () => {
       clearTimeout(timer)
       cancelAnimationFrame(rafId)
       lenis.destroy()
       io.disconnect()
-      window.removeEventListener('scroll', atualizar)
       de.style.scrollBehavior = prevBehavior
       if ('scrollRestoration' in history) history.scrollRestoration = 'auto'
     }
@@ -225,30 +252,8 @@ export default function Home() {
 
   return (
     <>
-      {/* <div className={`${styles.preloader} ${!isLoading ? styles.preloaderHidden : ''}`}>
-        <div className={styles.preloaderText}>{isLoading ? 'INICIANDO...' : ''}</div>
-        <div className={styles.loader}>{isLoading ? '' : ''}</div>
-        <div
-          className={styles.loader}
-          style={{ '--logo-url': `url(${logoLoader})` } as React.CSSProperties}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <div className={styles.preloaderBlocks}>
-          <div className={styles.pBlock}></div>
-          <div className={styles.pBlock}></div>
-          <div className={styles.pBlock}></div>
-          <div className={styles.pBlock}></div>
-          <div className={styles.pBlock}></div>
-        </div>
-      </div> */}
-
       <div className={`${styles.preloader} ${!isLoading ? styles.preloaderHidden : ''}`}>
-
-        {/* 👇 1. BLOCOS PRIMEIRO: Ficam no fundo da tela */}
+        {/* Blocos no fundo; loader (logo em quadrados) por cima. */}
         <div className={styles.preloaderBlocks}>
           <div className={styles.pBlock}></div>
           <div className={styles.pBlock}></div>
@@ -256,20 +261,13 @@ export default function Home() {
           <div className={styles.pBlock}></div>
           <div className={styles.pBlock}></div>
         </div>
-
-        {/* 👇 2. LOADER DEPOIS: Fica por cima dos blocos garantindo visibilidade */}
         <div className={styles.loader}>
-          {/* Usamos a checagem 'logoLoader.src' caso você esteja no Next.js, ou só 'logoLoader' no Vite */}
-          <span style={{ backgroundImage: `url("${typeof logoLoader === 'string' ? logoLoader : (logoLoader as any).src}")` }}></span>
-          <span style={{ backgroundImage: `url("${typeof logoLoader === 'string' ? logoLoader : (logoLoader as any).src}")` }}></span>
-          <span style={{ backgroundImage: `url("${typeof logoLoader === 'string' ? logoLoader : (logoLoader as any).src}")` }}></span>
-          <span style={{ backgroundImage: `url("${typeof logoLoader === 'string' ? logoLoader : (logoLoader as any).src}")` }}></span>
+          <span style={{ backgroundImage: `url("${logoLoader}")` }}></span>
+          <span style={{ backgroundImage: `url("${logoLoader}")` }}></span>
+          <span style={{ backgroundImage: `url("${logoLoader}")` }}></span>
+          <span style={{ backgroundImage: `url("${logoLoader}")` }}></span>
         </div>
-
       </div>
-
-
-
 
 
       {/* Letreiro de localização — só na 1ª tela (hero). Recolhe ao rolar. */}
@@ -298,7 +296,18 @@ export default function Home() {
 
       <main className={`${styles.main} ${!isLoading ? styles.isLoaded : ''}`}>
         <section className={styles.hero} data-tone="light">
-          <img src={childrenGif} alt="" aria-hidden className={styles.heroGif} />
+          <video
+            ref={videoRef}
+            className={styles.heroGif}
+            src={childrenVideo}
+            poster={childrenPoster}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            aria-hidden
+          />
           <div className={styles.heroScrim} />
           <div className={styles.heroContent}>
             <h1 className={styles.heroTitle}>
