@@ -68,6 +68,81 @@ export default function ProcedimentosSecao() {
       offsets = cards.map((c) => c.offsetTop)
     }
 
+    // ---- Otimizações ---------------------------------------------------
+    // 1) Estilo só é escrito no DOM quando o valor MUDA (cache por card).
+    // 2) Folha totalmente coberta é DESATIVADA: visibility:hidden a tira da
+    //    composição — sem ela, o navegador não empilha telas borradas
+    //    invisíveis umas atrás das outras.
+    // 3) Folha parada e 100% visível fica sem filtro/transform nenhum —
+    //    custo zero quando ninguém está em transição.
+    // 4) Folha ainda fora da tela fica limpa e com a névoa pausada
+    //    (data-dormindo pausa as animações de fundo via CSS).
+    // 5) will-change só nas folhas perto de animar — nada de 6 camadas de
+    //    GPU permanentes.
+    // 6) O scroll é agrupado por requestAnimationFrame: no máximo uma
+    //    atualização por quadro, por mais eventos que o Lenis dispare.
+    interface Memo {
+      transform: string | null
+      filter: string | null
+      origem: string | null
+      oculto: boolean | null
+      dorme: boolean | null
+      prepara: boolean | null
+    }
+    const memos: Memo[] = cards.map(() => ({
+      transform: null,
+      filter: null,
+      origem: null,
+      oculto: null,
+      dorme: null,
+      prepara: null,
+    }))
+
+    const aplicar = (
+      card: HTMLElement,
+      memo: Memo,
+      transform: string,
+      filter: string,
+      origem: string,
+      oculto: boolean,
+      dorme: boolean,
+      prepara: boolean,
+    ) => {
+      if (memo.transform !== transform) {
+        card.style.transform = transform
+        memo.transform = transform
+      }
+      if (memo.filter !== filter) {
+        card.style.filter = filter
+        memo.filter = filter
+      }
+      if (memo.origem !== origem) {
+        card.style.transformOrigin = origem
+        memo.origem = origem
+      }
+      if (memo.oculto !== oculto) {
+        card.style.visibility = oculto ? 'hidden' : ''
+        memo.oculto = oculto
+      }
+      if (memo.dorme !== dorme) {
+        if (dorme) card.setAttribute('data-dormindo', '')
+        else card.removeAttribute('data-dormindo')
+        memo.dorme = dorme
+      }
+      if (memo.prepara !== prepara) {
+        card.style.willChange = prepara ? 'transform, filter' : ''
+        memo.prepara = prepara
+      }
+    }
+
+    // Identidade não vira estilo: sem filtro/transform é mais leve do que
+    // brightness(1) blur(0px)/scale(1), que ativam os pipelines à toa.
+    const transf = (escala: number) => (escala >= 0.9995 ? '' : `scale(${escala.toFixed(4)})`)
+    const filtro = (brilho: number, desfoque: number) =>
+      brilho >= 0.999 && desfoque <= 0.02
+        ? ''
+        : `brightness(${brilho.toFixed(3)}) blur(${desfoque.toFixed(2)}px)`
+
     const atualizar = () => {
       const vh = window.innerHeight || 1
       const secaoTop = secao.getBoundingClientRect().top + window.scrollY
@@ -75,51 +150,75 @@ export default function ProcedimentosSecao() {
       for (let i = 0; i < cards.length; i++) {
         const card = cards[i]
         const off = offsets[i]
-        if (!card || off === undefined) continue
+        const memo = memos[i]
+        if (!card || off === undefined || !memo) continue
         // Topo do card no layout (o sticky é quem desliza; aqui só medimos).
         const top = secaoTop + off - scrollY
-        let desfoque: number
-        let brilho: number
-        let escala: number
+
+        if (top >= vh) {
+          // Ainda fora da tela (abaixo): limpa e dorme. Prepara a camada de
+          // GPU um pouco antes de entrar, para a promoção não custar um
+          // soluço no primeiro quadro da entrada.
+          aplicar(card, memo, '', '', '', false, true, top < vh * 1.2)
+          continue
+        }
+
         if (top > 1) {
           // ENTRANDO: sobe REDUZIDA nas laterais durante a entrada inteira e
-          // só preenche a tela no FINAL, quando termina de entrar (escala
-          // acompanha o progresso completo). O desfoque some cedo, aos ~15%.
-          // Origem embaixo: o crescimento empurra a borda de cima pra CIMA,
-          // reforçando o movimento de subida do encaixe.
+          // só preenche a tela no FINAL (escala acompanha o progresso
+          // completo). O desfoque some cedo, aos ~15%. Origem embaixo: o
+          // crescimento empurra a borda de cima pra CIMA (subida do encaixe).
           const e = clamp((vh - top) / vh, 0, 1)
           const p = clamp(e / LIMIAR_ENCAIXE, 0, 1) // 0→1 até os 15%
-          escala = ESCALA_ENTRADA + (1 - ESCALA_ENTRADA) * e // preenche no final
-          desfoque = DESFOQUE_ENTRADA * (1 - p)
-          brilho = BRILHO_ENTRADA + (1 - BRILHO_ENTRADA) * p
-          card.style.transformOrigin = 'center bottom'
-        } else {
-          // SAINDO: durante TODA a cobertura — encolhe progressivamente
-          // (laterais aparecem e a borda de cima desce), escurece e desfoca.
-          // Origem no centro: o topo desce junto com o encolhimento.
-          const offProx = offsets[i + 1]
-          const topProx = offProx === undefined ? Infinity : secaoTop + offProx - scrollY
-          const c = topProx === Infinity ? 0 : clamp((vh - topProx) / vh, 0, 1)
-          escala = 1 - (1 - ESCALA_COBERTA) * c
-          desfoque = DESFOQUE_COBERTO * c
-          brilho = 1 - (1 - BRILHO_COBERTO) * c
-          card.style.transformOrigin = 'center center'
+          const escala = ESCALA_ENTRADA + (1 - ESCALA_ENTRADA) * e
+          const desfoque = DESFOQUE_ENTRADA * (1 - p)
+          const brilho = BRILHO_ENTRADA + (1 - BRILHO_ENTRADA) * p
+          aplicar(card, memo, transf(escala), filtro(brilho, desfoque), 'center bottom', false, false, true)
+          continue
         }
-        card.style.transform = `scale(${escala.toFixed(4)})`
-        card.style.filter = `brightness(${brilho.toFixed(3)}) blur(${desfoque.toFixed(2)}px)`
+
+        // PRESA no topo: quanto a próxima folha já cobriu?
+        const offProx = offsets[i + 1]
+        const topProx = offProx === undefined ? Infinity : secaoTop + offProx - scrollY
+        const c = topProx === Infinity ? 0 : clamp((vh - topProx) / vh, 0, 1)
+
+        if (c >= 0.999) {
+          // Totalmente coberta → desativada (fora da composição) e dormindo.
+          aplicar(card, memo, '', '', '', true, true, false)
+        } else if (c <= 0.001) {
+          // Parada e 100% visível → custo zero (sem filtro, sem transform).
+          aplicar(card, memo, '', '', '', false, false, true)
+        } else {
+          // SAINDO: durante TODA a cobertura — encolhe (laterais + topo
+          // desce, origem no centro), escurece e desfoca.
+          const escala = 1 - (1 - ESCALA_COBERTA) * c
+          const desfoque = DESFOQUE_COBERTO * c
+          const brilho = 1 - (1 - BRILHO_COBERTO) * c
+          aplicar(card, memo, transf(escala), filtro(brilho, desfoque), 'center center', false, false, true)
+        }
       }
     }
 
+    // No máximo uma atualização por quadro (o Lenis dispara vários scrolls).
+    let quadroAgendado = false
+    const aoRolar = () => {
+      if (quadroAgendado) return
+      quadroAgendado = true
+      requestAnimationFrame(() => {
+        quadroAgendado = false
+        atualizar()
+      })
+    }
     const aoRedimensionar = () => {
       recalcular()
       atualizar()
     }
     recalcular()
     atualizar()
-    window.addEventListener('scroll', atualizar, { passive: true })
+    window.addEventListener('scroll', aoRolar, { passive: true })
     window.addEventListener('resize', aoRedimensionar)
     return () => {
-      window.removeEventListener('scroll', atualizar)
+      window.removeEventListener('scroll', aoRolar)
       window.removeEventListener('resize', aoRedimensionar)
     }
   }, [])

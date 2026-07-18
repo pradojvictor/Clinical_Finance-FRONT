@@ -31,8 +31,8 @@
      são aplicados por JS (ProcedimentosSecao.tsx) conforme o scroll — direto
      por frame, sem transição. A transform-origin também vem do JS: embaixo
      para quem entra (encaixe vira subida), centro para quem sai (o topo
-     desce junto com o encolhimento). */
-  will-change: transform, filter;
+     desce junto com o encolhimento). O will-change TAMBÉM é do JS: só nas
+     folhas perto de animar, para não manter 6 camadas de GPU fixas. */
   /* Cantos de baixo também arredondados: com a escala, a folha vira uma
      "lâmina" solta sobre o fundo escuro. */
   border-bottom-left-radius: var(--radius-xl);
@@ -86,6 +86,12 @@
 @keyframes fluir3 {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
   50%      { transform: translate3d(7%, -8%, 0) scale(1.25); }
+}
+
+/* Folha "dormindo" (fora da tela ou totalmente coberta — data-dormindo vem
+   do JS): a névoa pausa. Nada de animação rodando onde ninguém vê. */
+.card[data-dormindo] .fundo span {
+  animation-play-state: paused;
 }
 
 /* ---- Conteúdo (layout do módulo) ----------------------------------- */
