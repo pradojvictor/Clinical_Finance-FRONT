@@ -4,7 +4,7 @@
   position: relative;
   /* Fundo profundo: é o que aparece nas folgas laterais quando uma folha
      encolhe — a folha parece recuar no escuro. */
-  background: #0a0d1a;
+  background: #E1EBF8;
 }
 
 /* O truque do empilhamento: cada card gruda em top:0 com a altura da tela.
