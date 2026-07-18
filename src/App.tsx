@@ -21,6 +21,7 @@ declare const __ALVO__: Alvo
 const site = __ALVO__ !== 'sistema'
   ? {
       Home: lazy(() => import('./pages/Home')),
+      ProcedimentoDetalhe: lazy(() => import('./pages/ProcedimentoDetalhe')),
     }
   : null
 
@@ -54,6 +55,16 @@ export default function App() {
               element={
                 <Suspense fallback={null}>
                   <site.Home />
+                </Suspense>
+              }
+            />
+          )}
+          {site && (
+            <Route
+              path="/procedimentos/:slug"
+              element={
+                <Suspense fallback={null}>
+                  <site.ProcedimentoDetalhe />
                 </Suspense>
               }
             />

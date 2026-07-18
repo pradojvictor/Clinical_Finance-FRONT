@@ -1,0 +1,184 @@
+/* Página de um procedimento — card dividido: visual à esquerda, conteúdo
+   à direita. Estático (não é o zoom da listagem). */
+.page {
+  background: var(--bg);
+}
+
+.card {
+  min-height: calc(100vh - 4rem);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  background: var(--surface);
+  border-top: 0.0625rem solid var(--border);
+}
+
+/* ---- Painel visual (esquerda): névoa da marca ---------------------- */
+.visual {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--brand-navy);
+  display: flex;
+  align-items: flex-end;
+  padding: var(--sp-8);
+}
+.visual span[class*='brilho'] {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  z-index: -1;
+}
+.brilho1 {
+  width: 70%;
+  height: 70%;
+  top: -10%;
+  left: -8%;
+  background: radial-gradient(circle at 50% 50%, rgba(111, 159, 196, 0.8) 0%, rgba(111, 159, 196, 0) 65%);
+  animation: fluir1 26s ease-in-out infinite;
+}
+.brilho2 {
+  width: 60%;
+  height: 60%;
+  right: -8%;
+  top: 25%;
+  background: radial-gradient(circle at 50% 50%, rgba(156, 192, 221, 0.6) 0%, rgba(156, 192, 221, 0) 62%);
+  animation: fluir2 33s ease-in-out infinite;
+}
+.brilho3 {
+  width: 55%;
+  height: 55%;
+  bottom: -10%;
+  left: 20%;
+  background: radial-gradient(circle at 50% 50%, rgba(192, 196, 204, 0.4) 0%, rgba(192, 196, 204, 0) 60%);
+  animation: fluir3 29s ease-in-out infinite;
+}
+@keyframes fluir1 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(6%, 8%, 0) scale(1.2); }
+}
+@keyframes fluir2 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.1); }
+  50%      { transform: translate3d(-8%, -6%, 0) scale(0.9); }
+}
+@keyframes fluir3 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(7%, -7%, 0) scale(1.25); }
+}
+.visualNome {
+  font-size: clamp(1.75rem, 3vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+/* ---- Conteúdo (direita) -------------------------------------------- */
+.conteudo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--sp-4);
+  padding: clamp(var(--sp-6), 5vw, 4.5rem);
+}
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rotulo {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand-blue-700);
+}
+.contador {
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+  text-decoration: none;
+}
+.contador:hover {
+  color: var(--brand-navy);
+}
+.titulo {
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--brand-navy);
+}
+
+/* ---- Abas ----------------------------------------------------------- */
+.abas {
+  display: flex;
+  gap: var(--sp-4);
+  border-bottom: 0.0625rem solid var(--border);
+  margin-top: var(--sp-2);
+}
+.aba {
+  padding: 0.6rem 0;
+  background: none;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 0.125rem solid transparent;
+  margin-bottom: -0.0625rem;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.aba:hover {
+  color: var(--text);
+}
+.abaAtiva {
+  color: var(--brand-navy);
+  border-bottom-color: var(--brand-navy);
+}
+.abaConteudo {
+  min-height: 8rem;
+}
+.resumo {
+  font-size: var(--fs-lg);
+  color: var(--text);
+  line-height: 1.5;
+}
+.descricao {
+  margin-top: var(--sp-3);
+  font-size: var(--fs-md);
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.recomendados {
+  display: grid;
+  gap: var(--sp-2);
+}
+.recomendadoItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: var(--fs-md);
+  color: var(--text);
+}
+.recomendadoItem svg {
+  flex: 0 0 auto;
+  color: var(--brand-blue-700);
+}
+
+/* ---- Tela estreita -------------------------------------------------- */
+@media (max-width: 52rem) {
+  .card {
+    grid-template-columns: 1fr;
+    grid-template-rows: 40vh auto;
+  }
+  .visual {
+    padding: var(--sp-6);
+  }
+  .conteudo {
+    padding: var(--sp-6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visual span[class*='brilho'] {
+    animation: none;
+  }
+}

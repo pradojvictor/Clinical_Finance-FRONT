@@ -1,0 +1,222 @@
+/* Procedimentos — cards empilhados (referência: instituteofhealth.com).
+   Efeito 100% CSS: cada card é sticky no topo; o seguinte sobe e cobre. */
+.secao {
+  position: relative;
+  /* Fundo profundo: é o que aparece nas folgas laterais quando uma folha
+     encolhe — a folha parece recuar no escuro. */
+  background: #0a0d1a;
+}
+
+/* O truque do empilhamento: cada card gruda em top:0 com a altura da tela.
+   Como estão em fluxo normal (um após o outro), o próximo sobe e cobre o
+   anterior — que continua preso atrás. */
+.card {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  /* Fundo opaco é o que faz um card ESCONDER o de baixo ao cobri-lo. */
+  background: var(--brand-navy);
+  color: var(--text-on-navy);
+  /* Cantos arredondados no topo dão o ar de "folha" subindo sobre a outra. */
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  /* Sombra forte no topo marca a borda da folha subindo sobre a de baixo
+     (o "degrau" entre folhas). */
+  box-shadow: 0 -2rem 3.5rem rgba(8, 10, 24, 0.55);
+  /* brilho, desfoque e escala (largura + altura — a redução nas laterais)
+     são aplicados por JS (ProcedimentosSecao.tsx) conforme o scroll — direto
+     por frame, sem transição. A transform-origin também vem do JS: embaixo
+     para quem entra (encaixe vira subida), centro para quem sai (o topo
+     desce junto com o encolhimento). */
+  will-change: transform, filter;
+  /* Cantos de baixo também arredondados: com a escala, a folha vira uma
+     "lâmina" solta sobre o fundo escuro. */
+  border-bottom-left-radius: var(--radius-xl);
+  border-bottom-right-radius: var(--radius-xl);
+}
+
+/* ---- Fundo em névoa da marca --------------------------------------- */
+.fundo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+.fundo span {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+}
+.brilho1 {
+  width: 55%;
+  height: 90%;
+  top: -20%;
+  left: -8%;
+  background: radial-gradient(circle at 50% 50%, rgba(111, 159, 196, 0.75) 0%, rgba(111, 159, 196, 0) 65%);
+  animation: fluir1 28s ease-in-out infinite;
+}
+.brilho2 {
+  width: 50%;
+  height: 80%;
+  right: -6%;
+  top: 10%;
+  background: radial-gradient(circle at 50% 50%, rgba(156, 192, 221, 0.55) 0%, rgba(156, 192, 221, 0) 62%);
+  animation: fluir2 34s ease-in-out infinite;
+}
+.brilho3 {
+  width: 45%;
+  height: 60%;
+  bottom: -15%;
+  left: 30%;
+  background: radial-gradient(circle at 50% 50%, rgba(192, 196, 204, 0.35) 0%, rgba(192, 196, 204, 0) 60%);
+  animation: fluir3 30s ease-in-out infinite;
+}
+@keyframes fluir1 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(8%, 6%, 0) scale(1.2); }
+}
+@keyframes fluir2 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.1); }
+  50%      { transform: translate3d(-9%, -6%, 0) scale(0.9); }
+}
+@keyframes fluir3 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(7%, -8%, 0) scale(1.25); }
+}
+
+/* ---- Conteúdo (layout do módulo) ----------------------------------- */
+.conteudo {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 clamp(var(--sp-6), 6vw, 5rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+.topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.rotulo {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brand-blue-300);
+}
+.num {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: rgba(234, 238, 251, 0.35);
+}
+.nome {
+  font-size: clamp(2.75rem, 7vw, 5.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+}
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--brand-navy);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.botao:hover {
+  transform: translateY(-0.125rem);
+  box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.25);
+}
+.botao svg {
+  transition: transform 0.15s ease;
+}
+.botao:hover svg {
+  transform: translateX(0.2rem);
+}
+
+/* ---- Visão geral + Recomendados (as duas colunas) ------------------ */
+.blocos {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: clamp(var(--sp-6), 5vw, 4rem);
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-5);
+  border-top: 0.0625rem solid rgba(234, 238, 251, 0.18);
+}
+.bloco {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.blocoTitulo {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-blue-300);
+}
+.resumo {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: 1.4;
+  color: #ffffff;
+}
+.descricao {
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  color: var(--text-on-navy-soft);
+}
+.lista {
+  display: grid;
+  gap: 0.6rem;
+}
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: var(--fs-md);
+  color: var(--text-on-navy);
+}
+.item svg {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+  color: var(--brand-blue-300);
+}
+
+/* ---- Tela estreita: as duas colunas empilham ----------------------- */
+@media (max-width: 52rem) {
+  .card {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 6rem 0;
+  }
+  .blocos {
+    grid-template-columns: 1fr;
+    gap: var(--sp-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fundo span {
+    animation: none;
+  }
+}

@@ -1,33 +1,41 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Lenis from 'lenis'
 import 'lenis/dist/lenis.css'
 import Navbar from '../components/Navbar'
+import ProcedimentosSecao from '../components/ProcedimentosSecao'
 import childrenGif from '../assets/children.gif'
 import logoLoader from '../assets/logoloading.svg'
 import styles from './Home.module.css'
 
 const SERVICOS = [
   {
+    slug: 'psiquiatria',
     nome: 'Psiquiatria',
     texto: 'Diagnóstico e tratamento de transtornos mentais, com acompanhamento médico contínuo e humano.',
   },
   {
+    slug: 'psicologia',
     nome: 'Psicologia',
     texto: 'Terapia e escuta cuidadosa para promover equilíbrio emocional e qualidade de vida.',
   },
   {
+    slug: 'neuromodulacao',
     nome: 'Neuromodulação',
     texto: 'Estimulação cerebral avançada e não invasiva para tratar sintomas onde o remédio não basta.',
   },
   {
+    slug: 'ortopedia',
     nome: 'Ortopedia',
     texto: 'Cuidado com ossos, articulações e músculos para devolver o seu movimento.',
   },
   {
+    slug: 'fonoaudiologia',
     nome: 'Fonoaudiologia',
     texto: 'Avaliação e reabilitação da fala, linguagem, audição e deglutição.',
   },
   {
+    slug: 'fisioterapia',
     nome: 'Fisioterapia',
     texto: 'Reabilitação física para recuperar força, função e autonomia no dia a dia.',
   },
@@ -356,11 +364,17 @@ export default function Home() {
               <h3 className={styles.overviewTitulo}>Nossas especialidades</h3>
               <div className={styles.serviceCards}>
                 {SERVICOS.map((s, i) => (
-                  <article className={styles.serviceCard} data-servico-card key={s.nome}>
+                  <Link
+                    to={`/procedimentos/${s.slug}`}
+                    className={styles.serviceCard}
+                    data-servico-card
+                    key={s.nome}
+                  >
                     <span className={styles.cardNum}>{String(i + 1).padStart(2, '0')}</span>
                     <h4 className={styles.cardNome}>{s.nome}</h4>
                     <p className={styles.cardTexto}>{s.texto}</p>
-                  </article>
+                    <span className={styles.cardSaiba}>Saiba mais →</span>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -376,12 +390,8 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={styles.procedimentos} data-tone="dark">
-          <div className={styles.procedimentosInner}>
-            aqui vamos apresentar os procedimentos!!
-            zoom em cada um saindo da esquerda pra o fundo!
-          </div>
-        </section>
+        {/* Procedimentos — cards empilhados (referência instituteofhealth). */}
+        <ProcedimentosSecao />
 
         <section className={styles.profissionais} data-tone="dark">
           <div className={styles.profissionaisInner}>
