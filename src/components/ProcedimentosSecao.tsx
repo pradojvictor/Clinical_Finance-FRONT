@@ -242,27 +242,38 @@ export default function ProcedimentosSecao() {
             </div>
 
             <div className={s.conteudo}>
-              <div className={s.topo}>
-                <span className={s.rotulo}>Procedimento</span>
-                <span className={s.num}>{String(i + 1).padStart(2, '0')}</span>
+              {/* Bloco do título (rótulo + nome + botão), centralizado na
+                  vertical — como o "Module N / título / Explore More" da ref. */}
+              <div className={s.principal}>
+                <span className={s.rotulo}>Procedimento {i + 1}</span>
+
+                <h2 className={s.nome}>{p.nome}</h2>
+
+                {/* Botão no estilo da referência: retângulo translúcido, texto
+                    em cima e seta de canto embaixo. */}
+                <Link to={`/procedimentos/${p.slug}`} className={s.botao}>
+                  <span className={s.botaoTexto}>Saiba mais</span>
+                  <svg
+                    className={s.botaoSeta}
+                    viewBox="0 0 24 24"
+                    width="22"
+                    height="22"
+                    aria-hidden
+                  >
+                    <path
+                      d="M8 4 L8 15 L17 15 M13 11 L17 15 L13 19"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </Link>
               </div>
 
-              <h2 className={s.nome}>{p.nome}</h2>
-
-              <Link to={`/procedimentos/${p.slug}`} className={s.botao}>
-                Saiba mais
-                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden>
-                  <path
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 12h14M13 6l6 6-6 6"
-                  />
-                </svg>
-              </Link>
-
+              {/* Linha de baixo: Visão geral (esquerda) + Recomendado para
+                  (direita), espaçadas nas pontas — sem Format/Units. */}
               <div className={s.blocos}>
                 <div className={s.bloco}>
                   <span className={s.blocoTitulo}>Visão geral</span>
@@ -272,20 +283,11 @@ export default function ProcedimentosSecao() {
 
                 {temRecomendados && (
                   <div className={s.bloco}>
-                    <span className={s.blocoTitulo}>Recomendados</span>
+                    <span className={s.blocoTitulo}>Recomendado para</span>
                     <ul className={s.lista}>
                       {p.recomendados!.map((r) => (
                         <li key={r} className={s.item}>
-                          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden>
-                            <path
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
+                          <span className={s.marcador} aria-hidden />
                           {r}
                         </li>
                       ))}
