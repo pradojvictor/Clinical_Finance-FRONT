@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Lenis from 'lenis'
 import 'lenis/dist/lenis.css'
@@ -46,16 +46,43 @@ const SERVICOS = [
   },
 ]
 
+/** Posição de rolagem guardada ao sair da Home (ex.: clique em "Saiba
+ *  mais"). Na volta, o visitante cai no mesmo ponto — sem preloader. */
+const CHAVE_RETORNO = 'clinleste:home-scroll'
+
 export default function Home() {
   const [tone, setTone] = useState<'light' | 'dark'>('light')
-  const [isLoading, setIsLoading] = useState(true)
+  // Voltando de outra página (posição salva), já nasce carregada — o
+  // preloader nem pisca no primeiro paint.
+  const [isLoading, setIsLoading] = useState(() => sessionStorage.getItem(CHAVE_RETORNO) === null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  // A posição consumida fica num ref: o efeito roda 2x no StrictMode (dev)
+  // e a 2ª execução precisa reusar o valor — a chave já saiu do storage.
+  const retornoRef = useRef<number | null | 'pendente'>('pendente')
+
+  // Repõe a rolagem ANTES do primeiro paint na volta — sem flash do hero.
+  useLayoutEffect(() => {
+    const salvo = sessionStorage.getItem(CHAVE_RETORNO)
+    if (salvo !== null) window.scrollTo(0, Number(salvo) || 0)
+  }, [])
 
   // 👇 Adicionamos este estado para controlar os blocos do scroll
   const [isSectionVisible, setIsSectionVisible] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2000)
+    // Volta de outra página? Consome a posição salva (uma vez só — as
+    // execuções seguintes reusam o ref): pula o preloader e (mais abaixo)
+    // repõe a rolagem. Visita nova segue o fluxo normal.
+    if (retornoRef.current === 'pendente') {
+      const salvo = sessionStorage.getItem(CHAVE_RETORNO)
+      sessionStorage.removeItem(CHAVE_RETORNO)
+      retornoRef.current = salvo !== null ? Number(salvo) || 0 : null
+    }
+    const retorno = retornoRef.current
+
+    let timer: ReturnType<typeof setTimeout> | undefined
+    if (retorno === null) timer = setTimeout(() => setIsLoading(false), 2000)
+    else setIsLoading(false)
 
     // Alguns navegadores ignoram o atributo autoplay em vídeo montado via
     // JS — um play() explícito garante; se a política bloquear, o poster
@@ -208,9 +235,9 @@ export default function Home() {
       atualizarServicos()
     }
 
-    // Abre sempre no hero (sem restauração de scroll do navegador).
+    // Visita nova abre no hero; volta abre onde o visitante estava.
     de.style.scrollBehavior = 'auto'
-    window.scrollTo(0, 0)
+    window.scrollTo(0, retorno ?? 0)
     atualizar()
 
     // Scroll suave (inércia) para valorizar os efeitos ligados ao rolar.
@@ -240,6 +267,17 @@ export default function Home() {
     // (inclusive o nativo) no próprio 'scroll' — um segundo listener só
     // fazia o mesmo trabalho duas vezes por quadro.
 
+    // Guarda a posição no CLIQUE em qualquer link de procedimento ("Saiba
+    // mais", cards de especialidades…). No cleanup seria tarde demais: a
+    // página de destino zera a rolagem ANTES de o cleanup rodar, e scrollY
+    // já estaria em 0. Só clique simples (sem modificador = mesma aba).
+    const aoClicarEmProcedimento = (e: MouseEvent) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const link = (e.target as HTMLElement).closest?.('a[href^="/procedimentos/"]')
+      if (link) sessionStorage.setItem(CHAVE_RETORNO, String(Math.round(window.scrollY)))
+    }
+    document.addEventListener('click', aoClicarEmProcedimento, true)
+
     return () => {
       clearTimeout(timer)
       cancelAnimationFrame(rafId)
@@ -247,6 +285,7 @@ export default function Home() {
       io.disconnect()
       de.style.scrollBehavior = prevBehavior
       if ('scrollRestoration' in history) history.scrollRestoration = 'auto'
+      document.removeEventListener('click', aoClicarEmProcedimento, true)
     }
   }, [])
 

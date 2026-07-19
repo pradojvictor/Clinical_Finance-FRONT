@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { acharProcedimento } from '../config/procedimentos'
@@ -14,6 +14,12 @@ export default function ProcedimentoDetalhe() {
   const { slug } = useParams<{ slug: string }>()
   const procedimento = slug ? acharProcedimento(slug) : undefined
   const [aba, setAba] = useState<'visao' | 'recomendados'>('visao')
+
+  // Vindo da Home (que estava rolada lá embaixo), abre no topo — antes do
+  // primeiro paint, sem flash. A posição da Home fica guardada para a volta.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   if (!procedimento) return <Navigate to="/" replace />
 
