@@ -4,6 +4,7 @@ import Lenis from 'lenis'
 import 'lenis/dist/lenis.css'
 import Navbar from '../components/Navbar'
 import ProcedimentosSecao from '../components/ProcedimentosSecao'
+import ProfissionaisSecao from '../components/ProfissionaisSecao'
 // Vídeo H.264 gerado a partir do children.gif original (15,2 MB): mesmo
 // visual, ~1,7 MB. O poster (1º quadro, JPEG) pinta o hero na hora enquanto
 // o vídeo baixa. O .gif original continua no repositório, mas não é mais
@@ -441,12 +442,8 @@ export default function Home() {
         {/* Procedimentos — cards empilhados (referência instituteofhealth). */}
         <ProcedimentosSecao />
 
-        <section className={styles.profissionais} data-tone="dark">
-          <div className={styles.profissionaisInner}>
-            aqui vamos apresentar os profissionais!!
-            cads estilo carroseu
-          </div>
-        </section>
+        {/* Profissionais — carrossel guiado pelo scroll. */}
+        <ProfissionaisSecao />
 
         <section className={styles.midia} data-tone="dark">
           <div className={styles.midiaInner}>

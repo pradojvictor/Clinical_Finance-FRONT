@@ -1,0 +1,274 @@
+/* Profissionais — carrossel guiado pelo scroll (seção fixada).
+   Transforms/opacity/filter vêm do JS (ProfissionaisSecao.tsx), por frame.
+   Composição final de cada profissional: [atuação] [foto] [formação]. */
+.secao {
+  position: relative;
+  /* altura vem inline: nº de profissionais × 350vh */
+  /* Fundo claro da identidade da marca (mesmo dos procedimentos). */
+  background: #e1ebf8;
+  color: var(--brand-navy-700);
+}
+
+.palco {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.rotuloSecao {
+  position: absolute;
+  top: clamp(1.5rem, 4vh, 3rem);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brand-blue-700);
+  z-index: 5;
+}
+
+/* Cada profissional ocupa o palco inteiro; o JS o move como um bloco. */
+.prof {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  will-change: transform, opacity, filter;
+  pointer-events: none;
+}
+
+/* ---- Card da foto (frente, 3:4) ------------------------------------- */
+.cartao {
+  --cartao-w: clamp(16rem, 26vw, 21rem);
+  position: relative;
+  z-index: 2;
+  width: var(--cartao-w);
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow:
+    0 2.5rem 5rem -1.5rem rgba(22, 27, 82, 0.5),
+    0 0 0 0.0625rem rgba(255, 255, 255, 0.35);
+}
+.foto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.semFoto {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: rgba(234, 238, 251, 0.55);
+}
+.semFotoNum {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(234, 238, 251, 0.3);
+  font-variant-numeric: tabular-nums;
+}
+.semFotoAviso {
+  font-size: var(--fs-sm);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(234, 238, 251, 0.4);
+}
+
+/* ---- Cards laterais (formação à direita, atuação à esquerda) --------
+   Emergem de TRÁS da foto (z-index menor), desfocados, e ficam nítidos
+   quando chegam ao lugar. */
+.cardLateral {
+  position: absolute;
+  z-index: 1;
+  /* Cresce com o conteúdo até quase a tela. Se transbordar, o JS liga a
+     rolagem interna SÓ nesse card (pointer-events + data-lenis-prevent);
+     nos demais o mouse atravessa e o scroll da página segue normal. */
+  max-height: calc(100vh - 5rem);
+  overflow: auto;
+  padding: 1.3rem 1.35rem;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.85);
+  border: 0.0625rem solid rgba(26, 31, 66, 0.1);
+  box-shadow: 0 2rem 4rem -1.5rem rgba(22, 27, 82, 0.28);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  will-change: transform, opacity, filter;
+}
+.cardFormacao {
+  width: min(20rem, 28vw);
+}
+.cardAtuacao {
+  width: min(24rem, 33vw);
+}
+.compTitulo {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-blue-700);
+}
+/* Parágrafo de abertura do card de atuação (quando o profissional tem).
+   Tipografia compacta: este card pode carregar bastante conteúdo. */
+.atuacaoIntro {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--brand-navy-700);
+}
+
+/* Blocos do card de atuação: serviço (título) + descrição. */
+.atuacaoBloco {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-top: 0.75rem;
+  border-top: 0.0625rem solid rgba(26, 31, 66, 0.1);
+}
+.atuacaoTitulo {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #161b52;
+}
+.atuacaoTexto {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--brand-navy-700);
+}
+.compLista {
+  display: grid;
+  gap: 0.65rem;
+}
+.compItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--brand-navy-700);
+}
+.marcador {
+  flex: 0 0 auto;
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  margin-top: 0.45rem;
+  background: var(--brand-blue-700);
+}
+
+/* ---- Fase de texto: nome + profissão (ao lado do card) -------------- */
+.fases {
+  position: absolute;
+  left: calc(50% + (clamp(16rem, 26vw, 21rem) / 2) + clamp(2rem, 4vw, 4rem));
+  right: 6vw;
+  top: 50%;
+  transform: translateY(-50%);
+  min-height: 40vh;
+  display: grid;
+  align-items: center;
+}
+.fase {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  opacity: 0;
+  will-change: transform, opacity, filter;
+}
+.nome {
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  color: #161b52;
+  text-wrap: balance;
+}
+.profissao {
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  font-weight: 500;
+  color: var(--brand-blue-700);
+}
+
+/* ---- Tela estreita: foto em cima; os cards revezam embaixo ---------- */
+@media (max-width: 52rem) {
+  .prof {
+    place-items: start center;
+    padding-top: 12vh;
+  }
+  .cartao {
+    --cartao-w: clamp(11rem, 38vw, 15rem);
+  }
+  .fases {
+    left: 6vw;
+    right: 6vw;
+    top: auto;
+    bottom: 6vh;
+    transform: none;
+    min-height: 34vh;
+    align-items: start;
+  }
+  .nome {
+    font-size: clamp(1.6rem, 7vw, 2.2rem);
+  }
+  /* Cards laterais não cabem ao lado: ocupam a zona de baixo (o JS faz a
+     formação fechar antes de a atuação abrir — revezam no mesmo lugar). */
+  .cardLateral {
+    left: 6vw;
+    right: 6vw;
+    bottom: 6vh;
+    width: auto;
+    max-height: 44vh;
+  }
+}
+
+/* ---- Sem movimento (prefers-reduced-motion): tudo estático ---------- */
+.secao[data-estatico] {
+  height: auto !important;
+}
+.secao[data-estatico] .palco {
+  position: static;
+  height: auto;
+  overflow: visible;
+  display: grid;
+  gap: var(--sp-8);
+  padding: var(--sp-8) 6vw;
+}
+.secao[data-estatico] .rotuloSecao {
+  position: static;
+  transform: none;
+  justify-self: center;
+}
+.secao[data-estatico] .prof {
+  position: static;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-6);
+  align-items: start;
+  pointer-events: auto;
+}
+.secao[data-estatico] .fases {
+  position: static;
+  transform: none;
+  min-height: 0;
+}
+.secao[data-estatico] .fase {
+  opacity: 1;
+}
+.secao[data-estatico] .cardLateral {
+  position: static;
+  opacity: 1;
+  width: auto;
+  grid-column: 1 / -1;
+}

@@ -854,15 +854,6 @@ position: absolute;
   }
 }
 
-.profissionais{
-  width: 100%;
-  height: 100dvh;
-  min-height: 100dvh;
-  scroll-snap-align: start;
-  display: grid;
-  place-items: center;
-}
-
 .midia{
   width: 100%;
   height: 100dvh;
@@ -893,11 +884,9 @@ position: absolute;
   max-width: 600px;
 }
 
-/* Wrappers de conteúdo das seções placeholder (serviços, procedimentos,
-   profissionais, mídia). Estilo provisório só para não ficarem sem classe —
-   serão substituídos quando cada seção for construída. */
+/* Wrappers de conteúdo das seções placeholder que restam (mídia).
+   Estilo provisório — substituído quando a seção for construída. */
 .serviceInner,
-.profissionaisInner,
 .midiaInner {
   max-width: 46rem;
   padding: 0 var(--sp-6);
