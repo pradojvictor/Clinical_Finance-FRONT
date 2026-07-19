@@ -103,6 +103,10 @@ export default function ProfissionaisSecao() {
 
     // Escrita no DOM só quando muda (cache por elemento).
     const memo = new Map<HTMLElement, string>()
+    // Quem está "em cena" (espiando, ativo ou saindo). Fora de cena, o
+    // profissional é DESATIVADO: visibility:hidden o tira da composição e
+    // o will-change é limpo — nada de camada de GPU parada à toa.
+    const emCena: (boolean | null)[] = profs.map(() => null)
     const aplicar = (el: HTMLElement, transform: string, opacity: string, filter = '') => {
       const chave = transform + '|' + opacity + '|' + filter
       if (memo.get(el) === chave) return
@@ -120,6 +124,9 @@ export default function ProfissionaisSecao() {
       const total = secao.offsetHeight - vh
       const p = clamp(-rect.top / total, 0, 1)
       const seg = 1 / N
+      // Janelas iguais para todos: calculadas 1x por quadro, não por perfil.
+      const jF = jFormacao()
+      const jA = jAtuacao()
 
       for (let i = 0; i < N; i++) {
         const prof = profs[i]
@@ -130,10 +137,18 @@ export default function ProfissionaisSecao() {
         if (!prof || !cartao) continue
         const q = (p - i * seg) / seg
 
-        // ---- Janelas dos cards laterais (antes do container: a deriva
-        //      pra direita é guiada pela abertura da atuação) ------------
-        const jF = jFormacao()
-        const jA = jAtuacao()
+        // Fora de cena (nem espiando, nem ativo, nem saindo)? DESATIVA e
+        // pula: sem composição e sem nenhum cálculo para ele neste quadro.
+        const vivo = q > -1 && q < 1
+        if (emCena[i] !== vivo) {
+          emCena[i] = vivo
+          prof.style.visibility = vivo ? '' : 'hidden'
+          prof.style.willChange = vivo ? 'transform, opacity, filter' : ''
+        }
+        if (!vivo) continue
+
+        // ---- Aberturas dos cards laterais (a deriva pra direita é
+        //      guiada pela abertura da atuação) --------------------------
         const aF =
           suave(janela(q, jF.abre[0] ?? 0, jF.abre[1] ?? 1)) *
           (1 - suave(janela(q, jF.fecha[0] ?? 0, jF.fecha[1] ?? 1)))
@@ -274,7 +289,15 @@ export default function ProfissionaisSecao() {
               style={p.foto ? undefined : { background: p.gradiente }}
             >
               {p.foto ? (
-                <img className={s.foto} src={p.foto} alt={`Foto de ${p.nome}`} />
+                // lazy: a seção fica milhares de px abaixo — as fotos só
+                // baixam quando o visitante se aproxima, não no carregamento.
+                <img
+                  className={s.foto}
+                  src={p.foto}
+                  alt={`Foto de ${p.nome}`}
+                  loading="lazy"
+                  decoding="async"
+                />
               ) : (
                 <div className={s.semFoto} aria-hidden>
                   <svg viewBox="0 0 24 24" width="52" height="52">

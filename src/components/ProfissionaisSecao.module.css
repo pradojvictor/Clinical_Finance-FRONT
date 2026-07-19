@@ -30,13 +30,14 @@
   z-index: 5;
 }
 
-/* Cada profissional ocupa o palco inteiro; o JS o move como um bloco. */
+/* Cada profissional ocupa o palco inteiro; o JS o move como um bloco.
+   O will-change vem do JS: só no profissional em cena (os outros ficam
+   com visibility:hidden, fora da composição). */
 .prof {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  will-change: transform, opacity, filter;
   pointer-events: none;
 }
 
@@ -105,7 +106,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
-  will-change: transform, opacity, filter;
 }
 .cardFormacao {
   width: min(20rem, 28vw);
@@ -185,7 +185,6 @@
   flex-direction: column;
   gap: var(--sp-3);
   opacity: 0;
-  will-change: transform, opacity, filter;
 }
 .nome {
   font-size: clamp(2rem, 4.5vw, 3.5rem);
