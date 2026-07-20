@@ -55,7 +55,8 @@ export interface Usuario {
 }
 
 export const authApi = {
-  me: () => req<{ usuario: Usuario }>('/auth/me'),
+  /** Sem sessão a API responde 200 com usuario:null (não é erro nem 401). */
+  me: () => req<{ usuario: Usuario | null }>('/auth/me'),
   login: (login: string, senha: string) =>
     req<{ usuario: Usuario }>('/auth/login', {
       method: 'POST',

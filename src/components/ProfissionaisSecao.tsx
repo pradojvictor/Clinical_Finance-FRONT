@@ -273,7 +273,9 @@ export default function ProfissionaisSecao() {
     <section
       ref={secaoRef}
       className={s.secao}
-      data-tone="light"
+      // "dark" aqui é o TOM DO TEXTO do header (navy) — o certo para o
+      // fundo claro desta seção. ("light" = texto branco, só para o hero.)
+      data-tone="dark"
       id="profissionais"
       style={{ height: `${PROFISSIONAIS.length * VH_POR_PROFISSIONAL}vh` }}
     >

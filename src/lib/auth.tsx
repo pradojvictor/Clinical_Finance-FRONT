@@ -16,13 +16,24 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+/** A sessão só interessa às rotas do SISTEMA. Nas páginas públicas do site
+ *  a API nem é chamada — o site precisa funcionar com a API desligada; quem
+ *  depende dela é o sistema. O gestor chega em /login ou /sistema por
+ *  carregamento completo (favorito/URL), então olhar o pathname no mount
+ *  cobre todos os caminhos reais. */
+const rotaPrecisaDeSessao = () => {
+  const p = window.location.pathname
+  return p === '/login' || p === '/sistema' || p.startsWith('/sistema/')
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null)
   const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
-    // Build só-landing não tem API para perguntar: não existe sessão aqui.
-    if (!TEM_SISTEMA) {
+    // Build só-landing não tem API para perguntar; página pública não
+    // pergunta sessão (senão o site quebraria com a API desligada).
+    if (!TEM_SISTEMA || !rotaPrecisaDeSessao()) {
       setCarregando(false)
       return
     }
