@@ -1,0 +1,97 @@
+/* Pop-up flutuante do WhatsApp — canto inferior direito.
+   Estados: (escondido) → .visivel (após 10s) → .aberto (mostra "Agendar"). */
+.botao {
+  position: fixed;
+  right: clamp(1rem, 3vw, 1.75rem);
+  bottom: clamp(1rem, 3vh, 1.75rem);
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  height: 3.5rem;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  /* Corpo CLARO no estilo do site (lâmina branco → azul-gelo, como os
+     cards das seções claras) — o verde do WhatsApp fica no ÍCONE e no
+     pulso, mantendo o reconhecimento. */
+  background: linear-gradient(150deg, #ffffff 0%, #dce8f7 100%);
+  border: 0.0625rem solid rgba(26, 31, 66, 0.12);
+  color: #161b52;
+  text-decoration: none;
+  box-shadow: 0 0.75rem 2rem -0.5rem rgba(22, 27, 82, 0.35);
+  /* entrada: nasce recolhido embaixo, invisível */
+  opacity: 0;
+  transform: translateY(1.5rem) scale(0.6);
+  pointer-events: none;
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    gap 0.3s ease;
+}
+
+/* Apareceu (10s depois): sobe com um leve quique + anel pulsando. */
+.visivel {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.visivel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55);
+  animation: pulsar 2.2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes pulsar {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55); }
+  70%  { box-shadow: 0 0 0 0.9rem rgba(37, 211, 102, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+}
+/* Aberto não precisa mais chamar atenção. */
+.aberto::before {
+  animation: none;
+}
+
+.icone {
+  display: inline-flex;
+  flex: 0 0 auto;
+  /* O verde oficial do WhatsApp vive aqui — é o que dá o reconhecimento. */
+  color: #25d366;
+}
+
+/* O rótulo fica com largura 0 e surge quando .aberto entra. */
+.rotulo {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: max-width 0.3s ease, opacity 0.25s ease, margin-left 0.3s ease;
+}
+.aberto {
+  gap: 0.5rem;
+}
+.aberto .rotulo {
+  max-width: 7rem;
+  opacity: 1;
+}
+
+.botao:hover.visivel {
+  transform: translateY(-0.125rem) scale(1.03);
+}
+.botao:active.visivel {
+  transform: translateY(0) scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botao {
+    transition: opacity 0.3s ease;
+  }
+  .visivel::before {
+    animation: none;
+  }
+}

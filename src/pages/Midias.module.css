@@ -1,0 +1,67 @@
+/* Página /midias — mini blog. Mesmo mundo visual da seção da Home. */
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #ffffff 0%, #e9f1fb 70%, #dce8f7 100%);
+}
+
+.main {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: clamp(var(--sp-6), 6vw, 4rem) var(--sp-6) var(--sp-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.voltar {
+  align-self: flex-start;
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+  text-decoration: none;
+  margin-bottom: var(--sp-2);
+}
+.voltar:hover {
+  color: var(--brand-navy);
+}
+.rotulo {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brand-blue-700);
+}
+.titulo {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #161b52;
+  text-wrap: balance;
+}
+.sub {
+  font-size: var(--fs-md);
+  color: var(--brand-navy-700);
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-5);
+}
+
+@media (max-width: 62rem) {
+  .grade {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 40rem) {
+  .grade {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,98 @@
+/* Rodapé — última seção da Home. Navy profundo da marca; texto claro.
+   data-tone="light" → o header fica com texto branco quando passa por aqui. */
+.rodape {
+  background: linear-gradient(180deg, #12163a 0%, #0a0d1a 100%);
+  color: var(--text-on-navy);
+}
+
+.inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(var(--sp-7), 8vh, 5rem) var(--sp-6) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.colunas {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.2fr 1.2fr;
+  gap: clamp(var(--sp-5), 4vw, 3rem);
+  align-items: start;
+}
+
+.coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.marca {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}
+.slogan {
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-on-navy-soft);
+}
+.endereco {
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-on-navy);
+}
+
+.titulo {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-blue-300);
+  margin-bottom: 0.2rem;
+}
+
+.link {
+  font-size: var(--fs-sm);
+  color: var(--text-on-navy);
+  text-decoration: none;
+  transition: color 0.15s ease;
+  align-self: flex-start;
+}
+.link:hover {
+  color: var(--brand-blue-300);
+}
+
+.horario {
+  font-size: var(--fs-sm);
+  color: var(--text-on-navy-soft);
+}
+.horarioForte {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+}
+
+.base {
+  padding-top: var(--sp-4);
+  border-top: 0.0625rem solid rgba(234, 238, 251, 0.14);
+  display: flex;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  color: var(--text-on-navy-soft);
+}
+
+/* ---- Tela estreita: colunas empilham ------------------------------- */
+@media (max-width: 52rem) {
+  .colunas {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-5);
+  }
+}
+@media (max-width: 34rem) {
+  .colunas {
+    grid-template-columns: 1fr;
+  }
+}

@@ -22,6 +22,7 @@ const site = __ALVO__ !== 'sistema'
   ? {
       Home: lazy(() => import('./pages/Home')),
       ProcedimentoDetalhe: lazy(() => import('./pages/ProcedimentoDetalhe')),
+      Midias: lazy(() => import('./pages/Midias')),
     }
   : null
 
@@ -65,6 +66,16 @@ export default function App() {
               element={
                 <Suspense fallback={null}>
                   <site.ProcedimentoDetalhe />
+                </Suspense>
+              }
+            />
+          )}
+          {site && (
+            <Route
+              path="/midias"
+              element={
+                <Suspense fallback={null}>
+                  <site.Midias />
                 </Suspense>
               }
             />

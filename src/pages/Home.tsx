@@ -5,6 +5,10 @@ import 'lenis/dist/lenis.css'
 import Navbar from '../components/Navbar'
 import ProcedimentosSecao from '../components/ProcedimentosSecao'
 import ProfissionaisSecao from '../components/ProfissionaisSecao'
+import MidiasSecao from '../components/MidiasSecao'
+import SobreSecao from '../components/SobreSecao'
+import Rodape from '../components/Rodape'
+import BotaoWhatsApp from '../components/BotaoWhatsApp'
 // Vídeo H.264 gerado a partir do children.gif original (15,2 MB): mesmo
 // visual, ~1,7 MB. O poster (1º quadro, JPEG) pinta o hero na hora enquanto
 // o vídeo baixa. O .gif original continua no repositório, mas não é mais
@@ -53,16 +57,26 @@ const CHAVE_RETORNO = 'clinleste:home-scroll'
 
 export default function Home() {
   const [tone, setTone] = useState<'light' | 'dark'>('light')
-  // Voltando de outra página (posição salva), já nasce carregada — o
-  // preloader nem pisca no primeiro paint.
-  const [isLoading, setIsLoading] = useState(() => sessionStorage.getItem(CHAVE_RETORNO) === null)
+  // Voltando de outra página (posição salva) ou chegando direto na seção
+  // #sobre, já nasce carregada — o preloader nem pisca no primeiro paint.
+  const [isLoading, setIsLoading] = useState(
+    () => sessionStorage.getItem(CHAVE_RETORNO) === null && window.location.hash !== '#sobre',
+  )
   const videoRef = useRef<HTMLVideoElement>(null)
   // A posição consumida fica num ref: o efeito roda 2x no StrictMode (dev)
   // e a 2ª execução precisa reusar o valor — a chave já saiu do storage.
   const retornoRef = useRef<number | null | 'pendente'>('pendente')
 
   // Repõe a rolagem ANTES do primeiro paint na volta — sem flash do hero.
+  // Chegada por /#sobre (link do header em outra página) tem prioridade.
   useLayoutEffect(() => {
+    if (window.location.hash === '#sobre') {
+      const alvo = document.getElementById('sobre')
+      if (alvo) {
+        window.scrollTo(0, alvo.getBoundingClientRect().top + window.scrollY)
+        return
+      }
+    }
     const salvo = sessionStorage.getItem(CHAVE_RETORNO)
     if (salvo !== null) window.scrollTo(0, Number(salvo) || 0)
   }, [])
@@ -81,8 +95,9 @@ export default function Home() {
     }
     const retorno = retornoRef.current
 
+    const chegouNoSobre = window.location.hash === '#sobre'
     let timer: ReturnType<typeof setTimeout> | undefined
-    if (retorno === null) timer = setTimeout(() => setIsLoading(false), 2000)
+    if (retorno === null && !chegouNoSobre) timer = setTimeout(() => setIsLoading(false), 2000)
     else setIsLoading(false)
 
     // Alguns navegadores ignoram o atributo autoplay em vídeo montado via
@@ -236,9 +251,14 @@ export default function Home() {
       atualizarServicos()
     }
 
-    // Visita nova abre no hero; volta abre onde o visitante estava.
+    // Visita nova abre no hero; volta abre onde o visitante estava;
+    // /#sobre abre direto na seção Sobre.
     de.style.scrollBehavior = 'auto'
-    window.scrollTo(0, retorno ?? 0)
+    const alvoSobre = chegouNoSobre ? document.getElementById('sobre') : null
+    window.scrollTo(
+      0,
+      alvoSobre ? alvoSobre.getBoundingClientRect().top + window.scrollY : (retorno ?? 0),
+    )
     atualizar()
 
     // Scroll suave (inércia) para valorizar os efeitos ligados ao rolar.
@@ -272,9 +292,12 @@ export default function Home() {
     // mais", cards de especialidades…). No cleanup seria tarde demais: a
     // página de destino zera a rolagem ANTES de o cleanup rodar, e scrollY
     // já estaria em 0. Só clique simples (sem modificador = mesma aba).
+    // ("Sobre" no header não entra: é âncora para a seção #sobre daqui.)
     const aoClicarEmProcedimento = (e: MouseEvent) => {
       if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
-      const link = (e.target as HTMLElement).closest?.('a[href^="/procedimentos/"]')
+      const link = (e.target as HTMLElement).closest?.(
+        'a[href^="/procedimentos/"], a[href="/midias"]',
+      )
       if (link) sessionStorage.setItem(CHAVE_RETORNO, String(Math.round(window.scrollY)))
     }
     document.addEventListener('click', aoClicarEmProcedimento, true)
@@ -445,13 +468,18 @@ export default function Home() {
         {/* Profissionais — carrossel guiado pelo scroll. */}
         <ProfissionaisSecao />
 
-        <section className={styles.midia} data-tone="dark">
-          <div className={styles.midiaInner}>
-            <h2 className={styles.heros}>Clinleste</h2>
-            <p className={styles.herosp}>aqui vamos apresentar a mídia!! quadros com informaçoes uteis e videos do instagran!</p>
-          </div>
-        </section>
+        {/* Mídias — vitrine do mini blog (os 3 mais recentes + "Ver todos"). */}
+        <MidiasSecao />
+
+        {/* Sobre a clínica — destino do link "Sobre" do header (#sobre). */}
+        <SobreSecao />
+
+        {/* Rodapé — última seção (dentro do main para o tom do header). */}
+        <Rodape />
       </main>
+
+      {/* Pop-up flutuante do WhatsApp (aparece após 10s). */}
+      <BotaoWhatsApp />
     </>
   )
 }

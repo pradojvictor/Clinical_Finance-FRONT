@@ -78,6 +78,33 @@
   display: inline-flex;
   align-items: center;
 }
+
+/* ---- Sobre + redes (lado direito) --------------------------------- */
+/* Fora do landing não existe --fg: cai no marinho da marca. */
+.acoes {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-5);
+}
+.sobreLink {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--fg, #161b52);
+  text-decoration: none;
+  transition: color 0.3s ease, opacity 0.15s ease;
+}
+.sobreLink:hover {
+  opacity: 0.75;
+}
+.iconeRede {
+  display: inline-flex;
+  color: var(--fg, #161b52);
+  transition: color 0.3s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+.iconeRede:hover {
+  opacity: 0.8;
+  transform: translateY(-0.0625rem);
+}
 .logo {
   height: 2.25rem;
   width: auto;

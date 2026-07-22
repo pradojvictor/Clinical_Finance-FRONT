@@ -15,9 +15,44 @@ declare const process: { env: Record<string, string | undefined> }
 
 const ALVO = process.env.VITE_ALVO ?? 'tudo'
 
+// CSP da LANDING, embutida como <meta> no build do site. O sistema já tem
+// CSP via helmet (servido pelo Express); a landing é estática e pode parar
+// em qualquer host — a meta garante a política independentemente de quem
+// servir. Conferida contra o build real:
+//  - media-src 'self': o vídeo do hero é do próprio site;
+//  - frame-src google.com: o mapa da seção Sobre é um iframe do Maps;
+//  - style-src 'unsafe-inline': React usa style={{}} (não executa código);
+//  - o resto: só a própria origem, sem objeto/plugin, sem base furtiva.
+const CSP_LANDING = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "media-src 'self'",
+  'frame-src https://www.google.com',
+  "connect-src 'self'",
+  "font-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ')
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'csp-da-landing',
+      // Só no build do SITE: em dev ('tudo') atrapalharia o HMR, e no
+      // sistema quem manda é o helmet do Express.
+      transformIndexHtml(html) {
+        if (ALVO !== 'site') return html
+        return html.replace(
+          '<meta charset="UTF-8" />',
+          `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${CSP_LANDING}" />`,
+        )
+      },
+    },
+  ],
   define: { __ALVO__: JSON.stringify(ALVO) },
   server: {
     port: 5173,
